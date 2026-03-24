@@ -178,6 +178,28 @@ func TestInt64_ScanInvalid(t *testing.T) {
 	}
 }
 
+func TestInt64_KnownVector(t *testing.T) {
+	// timestamp=1700000000000ms, random=12345
+	raw := int64(1700000000000<<15) | 12345
+	id, err := typeid.Int64From[orgPrefix](raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const want = "org_01hf7yat00c1s"
+	if got := id.String(); got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+
+	parsed, err := typeid.ParseInt64[orgPrefix](want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Int64() != raw {
+		t.Errorf("roundtrip Int64 mismatch: got %d, want %d", parsed.Int64(), raw)
+	}
+}
+
 func TestInt64_Sortable(t *testing.T) {
 	a, err := typeid.NewInt64[orgPrefix]()
 	if err != nil {

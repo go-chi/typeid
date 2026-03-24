@@ -185,6 +185,32 @@ func TestUUID_ScanInvalid(t *testing.T) {
 	}
 }
 
+func TestUUID_KnownVector(t *testing.T) {
+	// UUIDv7: 01932c1c-e400-7360-8123-456789abcdef
+	raw := uuid.Must(uuid.FromBytes([]byte{
+		0x01, 0x93, 0x2c, 0x1c, 0xe4, 0x00,
+		0x73, 0x60,
+		0x81, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+	}))
+	id, err := typeid.UUIDFrom[userPrefix](raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const want = "user_01jcp1ss00edg828t5cy4tqkff"
+	if got := id.String(); got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+
+	parsed, err := typeid.ParseUUID[userPrefix](want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.UUID() != raw {
+		t.Errorf("roundtrip UUID mismatch: got %s, want %s", parsed.UUID(), raw)
+	}
+}
+
 func TestUUID_Sortable(t *testing.T) {
 	a, err := typeid.NewUUID[userPrefix]()
 	if err != nil {
