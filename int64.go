@@ -77,8 +77,12 @@ func ParseInt64[P Prefixer](s string) (Int64[P], error) {
 	return Int64From[P](v)
 }
 
-func (id Int64[P]) appendText(dst []byte) []byte { return appendBase32Int64(appendID[P](dst), id.val) }
-func (id Int64[P]) String() string               { return string(id.appendText(nil)) }
+func (id Int64[P]) appendText(dst []byte) []byte {
+	var p P
+	dst = growSlice(dst, len(p.Prefix())+1+int64SuffixLen)
+	return appendBase32Int64(appendID[P](dst), id.val)
+}
+func (id Int64[P]) String() string { return string(id.appendText(nil)) }
 func (id Int64[P]) Int64() int64                 { return id.val }
 func (id Int64[P]) IsZero() bool                 { return id.val == 0 }
 func (id Int64[P]) MarshalText() ([]byte, error) {

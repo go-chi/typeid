@@ -39,6 +39,13 @@ func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error)
 	return s[sep+1:], nil
 }
 
+func growSlice(dst []byte, n int) []byte {
+	if cap(dst)-len(dst) >= n {
+		return dst
+	}
+	return make([]byte, len(dst), len(dst)+n)
+}
+
 func appendID[P Prefixer](dst []byte) []byte {
 	var p P
 	dst = append(dst, p.Prefix()...)

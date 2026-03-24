@@ -44,8 +44,12 @@ func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 	return UUID[P]{val: u}, nil
 }
 
-func (id UUID[P]) appendText(dst []byte) []byte { return appendBase32UUID(appendID[P](dst), id.val) }
-func (id UUID[P]) String() string               { return string(id.appendText(nil)) }
+func (id UUID[P]) appendText(dst []byte) []byte {
+	var p P
+	dst = growSlice(dst, len(p.Prefix())+1+uuidSuffixLen)
+	return appendBase32UUID(appendID[P](dst), id.val)
+}
+func (id UUID[P]) String() string { return string(id.appendText(nil)) }
 func (id UUID[P]) UUID() uuid.UUID              { return id.val }
 func (id UUID[P]) IsZero() bool                 { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {
