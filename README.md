@@ -101,7 +101,7 @@ Stored as Postgres `BIGINT`. Collision table: 10 IDs/sec → ~1 per 7,500 days; 
 
 ## Benchmarks
 
-Apple M4 Pro, Go 1.24:
+Apple M4 Pro, Go 1.26.1:
 
 ```
 BenchmarkInt64_String         ~19 ns/op    24 B/op    1 allocs/op

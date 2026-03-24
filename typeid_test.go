@@ -5,7 +5,6 @@ import (
 	"database/sql/driver"
 	"encoding"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/go-chi/typeid"
@@ -57,7 +56,4 @@ func Example() {
 	// Output:
 	// true
 	// true
-
-	log.Println(orgID.String())
-	log.Println(userID.String())
 }
