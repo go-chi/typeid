@@ -59,8 +59,8 @@ func NewInt64[P Prefixer]() (Int64[P], error) {
 }
 
 func Int64From[P Prefixer](v int64) (Int64[P], error) {
-	if v < 0 {
-		return Int64[P]{}, ErrNegativeInt
+	if v <= 0 {
+		return Int64[P]{}, ErrNonPositiveInt
 	}
 	return Int64[P]{val: v}, nil
 }
@@ -70,12 +70,11 @@ func ParseInt64[P Prefixer](s string) (Int64[P], error) {
 	if err != nil {
 		return Int64[P]{}, err
 	}
-
 	v, err := decodeBase32Int64(suffix)
 	if err != nil {
 		return Int64[P]{}, err
 	}
-	return Int64[P]{val: v}, nil
+	return Int64From[P](v)
 }
 
 func (id Int64[P]) appendText(dst []byte) []byte { return appendBase32Int64(appendID[P](dst), id.val) }

@@ -63,7 +63,7 @@ Parsing validates the prefix at compile time — passing `"org_..."` to `ParseUU
 
 ```go
 id, err := typeid.UUIDFrom[userPrefix](rawUUID)   // rejects non-UUIDv7
-id, err := typeid.Int64From[orgPrefix](rawInt64)   // rejects negative
+id, err := typeid.Int64From[orgPrefix](rawInt64)   // rejects non-positive
 ```
 
 ### Use in structs

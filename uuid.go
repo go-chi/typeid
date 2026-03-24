@@ -33,7 +33,6 @@ func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 	if err != nil {
 		return UUID[P]{}, err
 	}
-
 	b, err := decodeBase32UUID(suffix)
 	if err != nil {
 		return UUID[P]{}, err

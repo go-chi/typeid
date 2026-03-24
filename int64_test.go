@@ -41,10 +41,10 @@ func ExampleParseInt64() {
 }
 
 func ExampleParseInt64_wrongPrefix() {
-	_, err := typeid.ParseInt64[orgPrefix]("user_0h455vb4pex5v")
+	_, err := typeid.ParseInt64[orgPrefix]("foo_0h455vb4pex5v")
 	fmt.Println(err)
 	// Output:
-	// typeid: prefix mismatch: expected "org", got "user"
+	// typeid: prefix mismatch: expected "org", got "foo"
 }
 
 func ExampleInt64From() {
@@ -60,11 +60,14 @@ func ExampleInt64From() {
 	// true
 }
 
-func ExampleInt64From_rejectsNegative() {
+func ExampleInt64From_rejectsNonPositive() {
 	_, err := typeid.Int64From[orgPrefix](-1)
 	fmt.Println(err)
+	_, err = typeid.Int64From[orgPrefix](0)
+	fmt.Println(err)
 	// Output:
-	// typeid: int64 must be non-negative
+	// typeid: non-positive Int64
+	// typeid: non-positive Int64
 }
 
 func ExampleInt64_IsZero() {
@@ -153,6 +156,7 @@ func TestParseInt64_Invalid(t *testing.T) {
 		{"suffix too long", "org_0h455vb4pex5vv"},
 		{"invalid base32 char", "org_0h455vb4pex!v"},
 		{"overflow first char", "org_8h455vb4pex5v"},
+		{"zero", "org_0000000000000"},
 		{"wrong prefix", "user_0h455vb4pex5v"},
 	}
 	for _, tt := range tests {
