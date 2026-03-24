@@ -123,6 +123,17 @@ func ExampleUUID_Scan() {
 	// true
 }
 
+func TestUUID_RejectZero(t *testing.T) {
+	var zero UserID
+
+	if _, err := zero.MarshalText(); err == nil {
+		t.Error("MarshalText should reject zero")
+	}
+	if _, err := zero.Value(); err == nil {
+		t.Error("Value should reject zero")
+	}
+}
+
 func TestUUID_Sortable(t *testing.T) {
 	a, err := typeid.NewUUID[userPrefix]()
 	if err != nil {

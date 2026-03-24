@@ -46,9 +46,9 @@ func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 }
 
 func (id UUID[P]) appendText(dst []byte) []byte { return appendBase32UUID(appendID[P](dst), id.val) }
-func (id UUID[P]) String() string                { return string(id.appendText(nil)) }
-func (id UUID[P]) UUID() uuid.UUID               { return id.val }
-func (id UUID[P]) IsZero() bool                  { return id.val == uuid.UUID{} }
+func (id UUID[P]) String() string               { return string(id.appendText(nil)) }
+func (id UUID[P]) UUID() uuid.UUID              { return id.val }
+func (id UUID[P]) IsZero() bool                 { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("typeid: cannot marshal zero UUID")
@@ -65,7 +65,12 @@ func (id *UUID[P]) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func (id UUID[P]) Value() (driver.Value, error) { return id.val.String(), nil }
+func (id UUID[P]) Value() (driver.Value, error) {
+	if id.IsZero() {
+		return nil, fmt.Errorf("typeid: cannot persist zero UUID")
+	}
+	return id.val.String(), nil
+}
 
 func (id *UUID[P]) Scan(src any) (err error) {
 	var u uuid.UUID
