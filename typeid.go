@@ -43,7 +43,9 @@ func growSlice(dst []byte, n int) []byte {
 	if cap(dst)-len(dst) >= n {
 		return dst
 	}
-	return make([]byte, len(dst), len(dst)+n)
+	buf := make([]byte, len(dst), len(dst)+n)
+	copy(buf, dst)
+	return buf
 }
 
 func appendID[P Prefixer](dst []byte) []byte {
