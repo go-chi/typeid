@@ -142,6 +142,42 @@ func TestInt64_RejectZeroAndNegative(t *testing.T) {
 	}
 }
 
+func TestParseInt64_Invalid(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"empty", ""},
+		{"no underscore", "abc"},
+		{"suffix too short", "org_abc"},
+		{"suffix too long", "org_0h455vb4pex5vv"},
+		{"invalid base32 char", "org_0h455vb4pex!v"},
+		{"overflow first char", "org_8h455vb4pex5v"},
+		{"wrong prefix", "user_0h455vb4pex5v"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := typeid.ParseInt64[orgPrefix](tt.input); err == nil {
+				t.Errorf("expected error for %q", tt.input)
+			}
+		})
+	}
+}
+
+func TestInt64_ScanInvalid(t *testing.T) {
+	var id OrgID
+
+	if err := id.Scan("hello"); err == nil {
+		t.Error("Scan should reject string")
+	}
+	if err := id.Scan(true); err == nil {
+		t.Error("Scan should reject bool")
+	}
+	if err := id.Scan(3.14); err == nil {
+		t.Error("Scan should reject float64")
+	}
+}
+
 func TestInt64_Sortable(t *testing.T) {
 	a, err := typeid.NewInt64[orgPrefix]()
 	if err != nil {

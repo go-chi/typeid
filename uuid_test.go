@@ -134,6 +134,57 @@ func TestUUID_RejectZero(t *testing.T) {
 	}
 }
 
+func TestParseUUID_Invalid(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"empty", ""},
+		{"no underscore", "abc"},
+		{"suffix too short", "user_abc"},
+		{"suffix too long", "user_01h455vb4pex5vsknk084sn02qq"},
+		{"invalid base32 char", "user_01h455vb4pex5vsknk084sn0!q"},
+		{"overflow first char", "user_81h455vb4pex5vsknk084sn02q"},
+		{"wrong prefix", "org_01h455vb4pex5vsknk084sn02q"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := typeid.ParseUUID[userPrefix](tt.input); err == nil {
+				t.Errorf("expected error for %q", tt.input)
+			}
+		})
+	}
+}
+
+func TestUUID_ScanInvalid(t *testing.T) {
+	var id UserID
+
+	// wrong type
+	if err := id.Scan(123); err == nil {
+		t.Error("Scan should reject int")
+	}
+	if err := id.Scan(true); err == nil {
+		t.Error("Scan should reject bool")
+	}
+
+	// non-v7 UUID (v4)
+	v4 := uuid.New()
+	if err := id.Scan(v4.String()); err == nil {
+		t.Error("Scan should reject non-v7 UUID string")
+	}
+	if err := id.Scan(v4[:]); err == nil {
+		t.Error("Scan should reject non-v7 UUID bytes")
+	}
+	if err := id.Scan([16]byte(v4)); err == nil {
+		t.Error("Scan should reject non-v7 [16]byte")
+	}
+
+	// malformed string
+	if err := id.Scan("not-a-uuid"); err == nil {
+		t.Error("Scan should reject malformed string")
+	}
+}
+
 func TestUUID_Sortable(t *testing.T) {
 	a, err := typeid.NewUUID[userPrefix]()
 	if err != nil {
