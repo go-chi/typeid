@@ -32,8 +32,8 @@ func decodeChar(c byte) (byte, error) {
 	return v, nil
 }
 
-// UUID encoding (128 bits -> 26 chars)
-func encodeBase32UUID(u uuid.UUID) string {
+// UUID encoding (128 bits -> 26 chars, appended to dst)
+func appendBase32UUID(dst []byte, u uuid.UUID) []byte {
 	hi := binary.BigEndian.Uint64(u[:8])
 	lo := binary.BigEndian.Uint64(u[8:])
 
@@ -53,7 +53,7 @@ func encodeBase32UUID(u uuid.UUID) string {
 	}
 	buf[0] = alphabet[hi&0x07]
 
-	return string(buf[:])
+	return append(dst, buf[:]...)
 }
 
 // UUID decoding (26 chars -> 128 bits)
@@ -101,8 +101,8 @@ func decodeBase32UUID(s string) ([16]byte, error) {
 	return out, nil
 }
 
-// Int64 encoding (63 bits -> 13 chars)
-func encodeBase32Int64(n int64) string {
+// Int64 encoding (63 bits -> 13 chars, appended to dst)
+func appendBase32Int64(dst []byte, n int64) []byte {
 	u := uint64(n)
 	var buf [int64SuffixLen]byte
 
@@ -112,7 +112,7 @@ func encodeBase32Int64(n int64) string {
 	}
 	buf[0] = alphabet[u&0x07]
 
-	return string(buf[:])
+	return append(dst, buf[:]...)
 }
 
 // Int64 decoding (13 chars -> 63 bits)

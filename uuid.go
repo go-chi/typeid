@@ -45,14 +45,15 @@ func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 	return UUID[P]{val: u}, nil
 }
 
-func (id UUID[P]) String() string  { return formatID[P](encodeBase32UUID(id.val)) }
-func (id UUID[P]) UUID() uuid.UUID { return id.val }
-func (id UUID[P]) IsZero() bool    { return id.val == uuid.UUID{} }
+func (id UUID[P]) appendText(dst []byte) []byte { return appendBase32UUID(appendID[P](dst), id.val) }
+func (id UUID[P]) String() string                { return string(id.appendText(nil)) }
+func (id UUID[P]) UUID() uuid.UUID               { return id.val }
+func (id UUID[P]) IsZero() bool                  { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("typeid: cannot marshal zero UUID")
 	}
-	return []byte(id.String()), nil
+	return id.appendText(nil), nil
 }
 
 func (id *UUID[P]) UnmarshalText(data []byte) error {

@@ -45,7 +45,8 @@ func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error)
 	return s[sep+1:], nil
 }
 
-func formatID[P Prefixer](suffix string) string {
+func appendID[P Prefixer](dst []byte) []byte {
 	var p P
-	return p.Prefix() + "_" + suffix
+	dst = append(dst, p.Prefix()...)
+	return append(dst, '_')
 }
