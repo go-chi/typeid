@@ -51,7 +51,7 @@ func (id UUID[P]) UUID() uuid.UUID              { return id.val }
 func (id UUID[P]) IsZero() bool                 { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("typeid: cannot marshal zero UUID")
+		return nil, ErrZeroUUID
 	}
 	return id.appendText(nil), nil
 }
@@ -67,7 +67,7 @@ func (id *UUID[P]) UnmarshalText(data []byte) error {
 
 func (id UUID[P]) Value() (driver.Value, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("typeid: cannot persist zero UUID")
+		return nil, ErrZeroUUID
 	}
 	return id.val.String(), nil
 }

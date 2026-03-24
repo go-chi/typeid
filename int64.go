@@ -84,7 +84,7 @@ func (id Int64[P]) Int64() int64                 { return id.val }
 func (id Int64[P]) IsZero() bool                 { return id.val == 0 }
 func (id Int64[P]) MarshalText() ([]byte, error) {
 	if id.val <= 0 {
-		return nil, fmt.Errorf("typeid: cannot marshal non-positive Int64")
+		return nil, ErrNonPositiveInt
 	}
 	return id.appendText(nil), nil
 }
@@ -100,7 +100,7 @@ func (id *Int64[P]) UnmarshalText(data []byte) error {
 
 func (id Int64[P]) Value() (driver.Value, error) {
 	if id.val <= 0 {
-		return nil, fmt.Errorf("typeid: cannot persist non-positive Int64")
+		return nil, ErrNonPositiveInt
 	}
 	return id.val, nil
 }
@@ -116,7 +116,7 @@ func (id *Int64[P]) Scan(src any) error {
 		return fmt.Errorf("typeid: cannot scan %T into Int64", src)
 	}
 	if v <= 0 {
-		return fmt.Errorf("typeid: cannot scan non-positive Int64")
+		return ErrNonPositiveInt
 	}
 	id.val = v
 	return nil

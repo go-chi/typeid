@@ -43,10 +43,10 @@ func ExampleParseUUID() {
 }
 
 func ExampleParseUUID_wrongPrefix() {
-	_, err := typeid.ParseUUID[userPrefix]("org_01h455vb4pex5vsknk084sn02q")
+	_, err := typeid.ParseUUID[userPrefix]("team_01h455vb4pex5vsknk084sn02q")
 	fmt.Println(err)
 	// Output:
-	// typeid: prefix mismatch: expected "user", got "org"
+	// typeid: prefix mismatch: expected "user", got "team"
 }
 
 func ExampleUUIDFrom() {

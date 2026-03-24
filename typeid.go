@@ -11,8 +11,12 @@ type Prefixer interface {
 }
 
 var (
-	ErrOnlyV7      = errors.New("typeid: only UUIDv7 is supported")
-	ErrNegativeInt = errors.New("typeid: int64 must be non-negative")
+	ErrOnlyV7         = errors.New("typeid: only UUIDv7 is supported")
+	ErrNegativeInt    = errors.New("typeid: int64 must be non-negative")
+	ErrZeroUUID       = errors.New("typeid: zero UUID")
+	ErrNonPositiveInt = errors.New("typeid: non-positive Int64")
+	ErrOverflowBase32 = errors.New("typeid: base32 overflow at pos 0")
+	ErrOverflowInt64  = errors.New("typeid: value overflows int64")
 )
 
 const (
@@ -26,8 +30,7 @@ func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error)
 	var p P
 	want := p.Prefix()
 
-	// Need at least: 1 char prefix + "_" + suffix
-	minLen := 1 + 1 + suffixLen
+	minLen := len(want) + 1 + suffixLen
 	if len(s) < minLen {
 		return "", fmt.Errorf("typeid: invalid format: %q", s)
 	}

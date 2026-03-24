@@ -67,7 +67,7 @@ func decodeBase32UUID(s string) ([16]byte, error) {
 		return [16]byte{}, err
 	}
 	if v > 7 {
-		return [16]byte{}, fmt.Errorf("typeid: base32 overflow at pos 0")
+		return [16]byte{}, ErrOverflowBase32
 	}
 	hi := uint64(v)
 
@@ -126,7 +126,7 @@ func decodeBase32Int64(s string) (int64, error) {
 		return 0, err
 	}
 	if v > 7 {
-		return 0, fmt.Errorf("typeid: base32 overflow at pos 0")
+		return 0, ErrOverflowBase32
 	}
 	val := uint64(v)
 
@@ -139,7 +139,7 @@ func decodeBase32Int64(s string) (int64, error) {
 	}
 
 	if val > 1<<63-1 {
-		return 0, fmt.Errorf("typeid: value overflows int64")
+		return 0, ErrOverflowInt64
 	}
 	return int64(val), nil
 }
