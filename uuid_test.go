@@ -224,6 +224,40 @@ func TestUUID_KnownVector(t *testing.T) {
 	}
 }
 
+func BenchmarkUUID_String(b *testing.B) {
+	id, err := typeid.NewUUID[userPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		_ = id.String()
+	}
+}
+
+func BenchmarkUUID_MarshalText(b *testing.B) {
+	id, err := typeid.NewUUID[userPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		id.MarshalText() //nolint:errcheck
+	}
+}
+
+func BenchmarkUUID_Parse(b *testing.B) {
+	id, err := typeid.NewUUID[userPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	s := id.String()
+	b.ResetTimer()
+	for b.Loop() {
+		typeid.ParseUUID[userPrefix](s) //nolint:errcheck
+	}
+}
+
 func TestUUID_Sortable(t *testing.T) {
 	a, err := typeid.NewUUID[userPrefix]()
 	if err != nil {

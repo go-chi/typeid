@@ -204,6 +204,40 @@ func TestInt64_KnownVector(t *testing.T) {
 	}
 }
 
+func BenchmarkInt64_String(b *testing.B) {
+	id, err := typeid.NewInt64[orgPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		_ = id.String()
+	}
+}
+
+func BenchmarkInt64_MarshalText(b *testing.B) {
+	id, err := typeid.NewInt64[orgPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		id.MarshalText() //nolint:errcheck
+	}
+}
+
+func BenchmarkInt64_Parse(b *testing.B) {
+	id, err := typeid.NewInt64[orgPrefix]()
+	if err != nil {
+		b.Fatal(err)
+	}
+	s := id.String()
+	b.ResetTimer()
+	for b.Loop() {
+		typeid.ParseInt64[orgPrefix](s) //nolint:errcheck
+	}
+}
+
 func TestInt64_Sortable(t *testing.T) {
 	a, err := typeid.NewInt64[orgPrefix]()
 	if err != nil {
