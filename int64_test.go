@@ -120,6 +120,28 @@ func ExampleInt64_Scan() {
 	// true
 }
 
+func TestInt64_RejectZeroAndNegative(t *testing.T) {
+	var zero OrgID
+
+	if _, err := zero.MarshalText(); err == nil {
+		t.Error("MarshalText should reject zero")
+	}
+	if _, err := zero.Value(); err == nil {
+		t.Error("Value should reject zero")
+	}
+
+	var scanned OrgID
+	if err := scanned.Scan(int64(0)); err == nil {
+		t.Error("Scan should reject zero")
+	}
+	if err := scanned.Scan(int64(-1)); err == nil {
+		t.Error("Scan should reject negative")
+	}
+	if err := scanned.Scan(int(-1)); err == nil {
+		t.Error("Scan should reject negative int")
+	}
+}
+
 func TestInt64_Sortable(t *testing.T) {
 	a, err := typeid.NewInt64[orgPrefix]()
 	if err != nil {

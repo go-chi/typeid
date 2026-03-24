@@ -82,7 +82,12 @@ func (id Int64[P]) appendText(dst []byte) []byte  { return appendBase32Int64(app
 func (id Int64[P]) String() string                { return string(id.appendText(nil)) }
 func (id Int64[P]) Int64() int64                  { return id.val }
 func (id Int64[P]) IsZero() bool                  { return id.val == 0 }
-func (id Int64[P]) MarshalText() ([]byte, error)  { return id.appendText(nil), nil }
+func (id Int64[P]) MarshalText() ([]byte, error) {
+	if id.val <= 0 {
+		return nil, fmt.Errorf("typeid: cannot marshal non-positive Int64")
+	}
+	return id.appendText(nil), nil
+}
 
 func (id *Int64[P]) UnmarshalText(data []byte) error {
 	parsed, err := ParseInt64[P](string(data))
@@ -93,16 +98,26 @@ func (id *Int64[P]) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func (id Int64[P]) Value() (driver.Value, error) { return id.val, nil }
+func (id Int64[P]) Value() (driver.Value, error) {
+	if id.val <= 0 {
+		return nil, fmt.Errorf("typeid: cannot persist non-positive Int64")
+	}
+	return id.val, nil
+}
 
 func (id *Int64[P]) Scan(src any) error {
-	switch v := src.(type) {
+	var v int64
+	switch sv := src.(type) {
 	case int64:
-		id.val = v
+		v = sv
 	case int:
-		id.val = int64(v)
+		v = int64(sv)
 	default:
 		return fmt.Errorf("typeid: cannot scan %T into Int64", src)
 	}
+	if v <= 0 {
+		return fmt.Errorf("typeid: cannot scan non-positive Int64")
+	}
+	id.val = v
 	return nil
 }
