@@ -27,9 +27,9 @@ const randomBits = 15
 // the birthday problem: ~R²/65,536,000 expected collisions per second for R
 // total IDs/sec across all servers.
 //
-//	    10 IDs/sec → ~1 collision per 7,500 days
-//	   100 IDs/sec → ~1 collision per 1.8 hours
-//	 1,000 IDs/sec → ~1 collision per 65 seconds
+//	   10 IDs/sec → ~1 collision per 7,500 days
+//	  100 IDs/sec → ~1 collision per 1.8 hours
+//	1,000 IDs/sec → ~1 collision per 65 seconds
 //
 // Protect with a UNIQUE constraint and retry on conflict. For high-throughput
 // resources use [UUID] instead.
@@ -78,9 +78,9 @@ func ParseInt64[P Prefixer](s string) (Int64[P], error) {
 	return Int64[P]{val: v}, nil
 }
 
-func (id Int64[P]) String() string         { return formatID[P](encodeBase32Int64(id.val)) }
-func (id Int64[P]) Int64() int64           { return id.val }
-func (id Int64[P]) IsZero() bool           { return id.val == 0 }
+func (id Int64[P]) String() string               { return formatID[P](encodeBase32Int64(id.val)) }
+func (id Int64[P]) Int64() int64                 { return id.val }
+func (id Int64[P]) IsZero() bool                 { return id.val == 0 }
 func (id Int64[P]) MarshalText() ([]byte, error) { return []byte(id.String()), nil }
 
 func (id *Int64[P]) UnmarshalText(data []byte) error {

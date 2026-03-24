@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/typeid"
 	"github.com/google/uuid"
+
+	"github.com/go-chi/typeid"
 )
 
 func ExampleNewUUID() {
