@@ -156,6 +156,19 @@ func TestParseUUID_Invalid(t *testing.T) {
 	}
 }
 
+func TestUUID_ScanRawBytes(t *testing.T) {
+	id, _ := typeid.NewUUID[userPrefix]()
+	raw := id.UUID()
+
+	var scanned UserID
+	if err := scanned.Scan(raw[:]); err != nil {
+		t.Fatalf("Scan raw 16-byte slice: %v", err)
+	}
+	if scanned != id {
+		t.Errorf("got %s, want %s", scanned, id)
+	}
+}
+
 func TestUUID_ScanInvalid(t *testing.T) {
 	var id UserID
 

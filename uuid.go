@@ -79,8 +79,13 @@ func (id *UUID[P]) Scan(src any) (err error) {
 			return err
 		}
 	case []byte:
-		if u, err = uuid.ParseBytes(v); err != nil {
-			return err
+		switch {
+		case len(v) == 16:
+			copy(u[:], v)
+		default:
+			if u, err = uuid.ParseBytes(v); err != nil {
+				return err
+			}
 		}
 	case [16]byte:
 		u = uuid.UUID(v)
