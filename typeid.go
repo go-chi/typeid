@@ -10,6 +10,12 @@ type Prefixer interface {
 	Prefix() string
 }
 
+// ScopedPrefixer is the constraint for IDs that support multiple prefixes.
+// Each index in Prefixes() represents a scope (e.g. environment).
+type ScopedPrefixer interface {
+	Prefixes() []string
+}
+
 var (
 	ErrOnlyV7      = errors.New("typeid: only UUIDv7 is supported")
 	ErrNegativeInt = errors.New("typeid: int64 must be non-negative")
@@ -48,4 +54,32 @@ func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error)
 func formatID[P Prefixer](suffix string) string {
 	var p P
 	return p.Prefix() + "_" + suffix
+}
+
+func splitScopedTypeid[P ScopedPrefixer](s string, suffixLen int) (scope uint8, suffix string, err error) {
+	var p P
+	prefixes := p.Prefixes()
+
+	minLen := 1 + 1 + suffixLen
+	if len(s) < minLen {
+		return 0, "", fmt.Errorf("typeid: invalid format: %q", s)
+	}
+
+	sep := len(s) - suffixLen - 1
+	if s[sep] != '_' {
+		return 0, "", fmt.Errorf("typeid: invalid format: %q", s)
+	}
+
+	got := s[:sep]
+	for i, want := range prefixes {
+		if got == want {
+			return uint8(i), s[sep+1:], nil
+		}
+	}
+	return 0, "", fmt.Errorf("typeid: prefix mismatch: expected one of %v, got %q", prefixes, got)
+}
+
+func formatScopedID[P ScopedPrefixer](scope uint8, suffix string) string {
+	var p P
+	return p.Prefixes()[scope] + "_" + suffix
 }
