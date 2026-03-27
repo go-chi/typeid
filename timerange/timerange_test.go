@@ -219,7 +219,7 @@ func TestTimeRange_FloorCeil_Accessors(t *testing.T) {
 
 	if f, ok := r.Floor(); !ok {
 		t.Fatal("Floor() returned false")
-	} else if f.IsZero() {
+	} else if f.(timerange.UUID).IsZero() {
 		t.Fatal("Floor() is zero")
 	}
 

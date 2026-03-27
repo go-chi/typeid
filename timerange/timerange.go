@@ -22,17 +22,17 @@ type Int64 interface {
 	Value() (driver.Value, error)
 }
 
-type uuidBound struct{ val uuid.UUID }
+type uuidValue struct{ val uuid.UUID }
 
-func (b uuidBound) UUID() uuid.UUID              { return b.val }
-func (b uuidBound) IsZero() bool                 { return b.val == uuid.UUID{} }
-func (b uuidBound) Value() (driver.Value, error)  { return b.val.String(), nil }
+func (b uuidValue) UUID() uuid.UUID              { return b.val }
+func (b uuidValue) IsZero() bool                 { return b.val == uuid.UUID{} }
+func (b uuidValue) Value() (driver.Value, error) { return b.val.String(), nil }
 
-type int64Bound struct{ val int64 }
+type int64Value struct{ val int64 }
 
-func (b int64Bound) Int64() int64                 { return b.val }
-func (b int64Bound) IsZero() bool                 { return b.val == 0 }
-func (b int64Bound) Value() (driver.Value, error)  { return b.val, nil }
+func (b int64Value) Int64() int64                 { return b.val }
+func (b int64Value) IsZero() bool                 { return b.val == 0 }
+func (b int64Value) Value() (driver.Value, error) { return b.val, nil }
 
 // FloorUUID returns the lowest valid UUIDv7 for timestamp t.
 // Any UUIDv7 generated at or after t will be >= FloorUUID(t).
@@ -47,7 +47,7 @@ func FloorUUID(t time.Time) UUID {
 	u[5] = byte(ms)
 	u[6] = 0x70 // version 7
 	u[8] = 0x80 // variant 10xxxxxx
-	return uuidBound{val: u}
+	return uuidValue{val: u}
 }
 
 // CeilUUID returns the highest valid UUIDv7 for timestamp t.
@@ -67,7 +67,7 @@ func CeilUUID(t time.Time) UUID {
 	for i := 9; i < 16; i++ {
 		u[i] = 0xff
 	}
-	return uuidBound{val: u}
+	return uuidValue{val: u}
 }
 
 const randomBits = 15
@@ -75,94 +75,73 @@ const randomBits = 15
 // FloorInt64 returns the lowest valid int64 ID for timestamp t.
 func FloorInt64(t time.Time) Int64 {
 	ms := t.UnixMilli()
-	return int64Bound{val: ms << randomBits}
+	return int64Value{val: ms << randomBits}
 }
 
 // CeilInt64 returns the highest valid int64 ID for timestamp t.
 func CeilInt64(t time.Time) Int64 {
 	ms := t.UnixMilli()
-	return int64Bound{val: ms<<randomBits | 0x7FFF}
+	return int64Value{val: ms<<randomBits | 0x7FFF}
 }
-
-type valuer interface{ Value() (driver.Value, error) }
 
 // TimeRange holds optional floor/ceil bounds for time-based ID range queries.
 // It satisfies squirrel.Sqlizer structurally via ToSql.
-type TimeRange[T valuer] struct {
+type TimeRange struct {
 	column string
-	floor  *T
-	ceil   *T
+	floor  driver.Valuer
+	ceil   driver.Valuer
 }
 
 // UUIDRange returns a TimeRange over UUID IDs for the given time window.
 // Nil since/until means unbounded on that side.
-func UUIDRange(column string, since, until *time.Time) TimeRange[UUID] {
-	var r TimeRange[UUID]
-	r.column = column
+func UUIDRange(column string, since, until *time.Time) TimeRange {
+	r := TimeRange{column: column}
 	if since != nil {
-		f := FloorUUID(*since)
-		r.floor = &f
+		r.floor = FloorUUID(*since)
 	}
 	if until != nil {
-		c := CeilUUID(*until)
-		r.ceil = &c
+		r.ceil = CeilUUID(*until)
 	}
 	return r
 }
 
 // Int64Range returns a TimeRange over Int64 IDs for the given time window.
 // Nil since/until means unbounded on that side.
-func Int64Range(column string, since, until *time.Time) TimeRange[Int64] {
-	var r TimeRange[Int64]
-	r.column = column
+func Int64Range(column string, since, until *time.Time) TimeRange {
+	r := TimeRange{column: column}
 	if since != nil {
-		f := FloorInt64(*since)
-		r.floor = &f
+		r.floor = FloorInt64(*since)
 	}
 	if until != nil {
-		c := CeilInt64(*until)
-		r.ceil = &c
+		r.ceil = CeilInt64(*until)
 	}
 	return r
 }
 
-func (r TimeRange[T]) Floor() (T, bool) {
-	if r.floor == nil {
-		var zero T
-		return zero, false
-	}
-	return *r.floor, true
-}
-
-func (r TimeRange[T]) Ceil() (T, bool) {
-	if r.ceil == nil {
-		var zero T
-		return zero, false
-	}
-	return *r.ceil, true
-}
+func (r TimeRange) Floor() (driver.Valuer, bool) { return r.floor, r.floor != nil }
+func (r TimeRange) Ceil() (driver.Valuer, bool)  { return r.ceil, r.ceil != nil }
 
 // ToSql satisfies squirrel.Sqlizer structurally (no import needed).
-func (r TimeRange[T]) ToSql() (string, []any, error) {
+func (r TimeRange) ToSql() (string, []any, error) {
 	switch {
 	case r.floor != nil && r.ceil != nil:
-		fv, err := (*r.floor).Value()
+		fv, err := r.floor.Value()
 		if err != nil {
 			return "", nil, fmt.Errorf("typeid: floor value: %w", err)
 		}
-		cv, err := (*r.ceil).Value()
+		cv, err := r.ceil.Value()
 		if err != nil {
 			return "", nil, fmt.Errorf("typeid: ceil value: %w", err)
 		}
 		return r.column + " BETWEEN ? AND ?", []any{fv, cv}, nil
 	case r.floor != nil:
-		fv, err := (*r.floor).Value()
+		fv, err := r.floor.Value()
 		if err != nil {
 			return "", nil, fmt.Errorf("typeid: floor value: %w", err)
 		}
 		return r.column + " >= ?", []any{fv}, nil
 	case r.ceil != nil:
-		cv, err := (*r.ceil).Value()
+		cv, err := r.ceil.Value()
 		if err != nil {
 			return "", nil, fmt.Errorf("typeid: ceil value: %w", err)
 		}
