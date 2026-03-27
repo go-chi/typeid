@@ -19,7 +19,7 @@ func (orgPrefix) Prefix() string { return "org" }
 
 func TestFloorUUID(t *testing.T) {
 	now := time.Now()
-	floor := timerange.FloorUUID[userPrefix](now)
+	floor := timerange.FloorUUID(now)
 	u := floor.UUID()
 
 	if u.Version() != 7 {
@@ -43,8 +43,8 @@ func TestFloorUUID(t *testing.T) {
 
 func TestCeilUUID(t *testing.T) {
 	now := time.Now()
-	ceil := timerange.CeilUUID[userPrefix](now)
-	floor := timerange.FloorUUID[userPrefix](now)
+	ceil := timerange.CeilUUID(now)
+	floor := timerange.FloorUUID(now)
 
 	u := ceil.UUID()
 	if u.Version() != 7 {
@@ -67,8 +67,8 @@ func TestFloorCeilUUID_Bracket(t *testing.T) {
 	ms := extractUUIDTimestamp(u)
 	ts := time.UnixMilli(ms)
 
-	floor := timerange.FloorUUID[userPrefix](ts)
-	ceil := timerange.CeilUUID[userPrefix](ts)
+	floor := timerange.FloorUUID(ts)
+	ceil := timerange.CeilUUID(ts)
 
 	if floor.UUID().String() > u.String() {
 		t.Fatalf("floor %s > id %s", floor.UUID(), u)
@@ -80,7 +80,7 @@ func TestFloorCeilUUID_Bracket(t *testing.T) {
 
 func TestFloorUUID_TimestampRoundTrip(t *testing.T) {
 	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
-	floor := timerange.FloorUUID[userPrefix](ts)
+	floor := timerange.FloorUUID(ts)
 	got := extractUUIDTimestamp(floor.UUID())
 	if got != ts.UnixMilli() {
 		t.Fatalf("timestamp = %d, want %d", got, ts.UnixMilli())
@@ -89,7 +89,7 @@ func TestFloorUUID_TimestampRoundTrip(t *testing.T) {
 
 func TestFloorInt64(t *testing.T) {
 	now := time.Now()
-	floor := timerange.FloorInt64[orgPrefix](now)
+	floor := timerange.FloorInt64(now)
 
 	for range 100 {
 		id, err := typeid.NewInt64[orgPrefix]()
@@ -104,8 +104,8 @@ func TestFloorInt64(t *testing.T) {
 
 func TestCeilInt64(t *testing.T) {
 	now := time.Now()
-	ceil := timerange.CeilInt64[orgPrefix](now)
-	floor := timerange.FloorInt64[orgPrefix](now)
+	ceil := timerange.CeilInt64(now)
+	floor := timerange.FloorInt64(now)
 
 	if ceil.Int64() < floor.Int64() {
 		t.Fatalf("ceil %d < floor %d", ceil.Int64(), floor.Int64())
@@ -121,8 +121,8 @@ func TestFloorCeilInt64_Bracket(t *testing.T) {
 	ms := v >> 15
 	ts := time.UnixMilli(ms)
 
-	floor := timerange.FloorInt64[orgPrefix](ts)
-	ceil := timerange.CeilInt64[orgPrefix](ts)
+	floor := timerange.FloorInt64(ts)
+	ceil := timerange.CeilInt64(ts)
 
 	if floor.Int64() > v {
 		t.Fatalf("floor %d > id %d", floor.Int64(), v)
@@ -135,7 +135,7 @@ func TestFloorCeilInt64_Bracket(t *testing.T) {
 func TestTimeRange_ToSql_BothSet(t *testing.T) {
 	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
-	r := timerange.UUIDRange[userPrefix]("id", &since, &until)
+	r := timerange.UUIDRange("id", &since, &until)
 
 	sql, args, err := r.ToSql()
 	if err != nil {
@@ -151,7 +151,7 @@ func TestTimeRange_ToSql_BothSet(t *testing.T) {
 
 func TestTimeRange_ToSql_SinceOnly(t *testing.T) {
 	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	r := timerange.UUIDRange[userPrefix]("id", &since, nil)
+	r := timerange.UUIDRange("id", &since, nil)
 
 	sql, args, err := r.ToSql()
 	if err != nil {
@@ -167,7 +167,7 @@ func TestTimeRange_ToSql_SinceOnly(t *testing.T) {
 
 func TestTimeRange_ToSql_UntilOnly(t *testing.T) {
 	until := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
-	r := timerange.UUIDRange[userPrefix]("id", nil, &until)
+	r := timerange.UUIDRange("id", nil, &until)
 
 	sql, args, err := r.ToSql()
 	if err != nil {
@@ -182,7 +182,7 @@ func TestTimeRange_ToSql_UntilOnly(t *testing.T) {
 }
 
 func TestTimeRange_ToSql_Neither(t *testing.T) {
-	r := timerange.UUIDRange[userPrefix]("id", nil, nil)
+	r := timerange.UUIDRange("id", nil, nil)
 
 	sql, args, err := r.ToSql()
 	if err != nil {
@@ -199,7 +199,7 @@ func TestTimeRange_ToSql_Neither(t *testing.T) {
 func TestTimeRange_ToSql_Int64(t *testing.T) {
 	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	until := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
-	r := timerange.Int64Range[orgPrefix]("id", &since, &until)
+	r := timerange.Int64Range("id", &since, &until)
 
 	sql, args, err := r.ToSql()
 	if err != nil {
@@ -215,7 +215,7 @@ func TestTimeRange_ToSql_Int64(t *testing.T) {
 
 func TestTimeRange_FloorCeil_Accessors(t *testing.T) {
 	since := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	r := timerange.UUIDRange[userPrefix]("id", &since, nil)
+	r := timerange.UUIDRange("id", &since, nil)
 
 	if f, ok := r.Floor(); !ok {
 		t.Fatal("Floor() returned false")
@@ -228,7 +228,7 @@ func TestTimeRange_FloorCeil_Accessors(t *testing.T) {
 	}
 }
 
-// Verify interfaces are satisfied.
+// Verify typeid types satisfy the interfaces.
 var _ timerange.UUID = typeid.UUID[userPrefix]{}
 var _ timerange.Int64 = typeid.Int64[orgPrefix]{}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-chi/typeid"
 	"github.com/google/uuid"
 )
 
@@ -23,9 +22,21 @@ type Int64 interface {
 	Value() (driver.Value, error)
 }
 
-// FloorUUID returns the lowest valid UUID[P] for timestamp t.
+type uuidBound struct{ val uuid.UUID }
+
+func (b uuidBound) UUID() uuid.UUID              { return b.val }
+func (b uuidBound) IsZero() bool                 { return b.val == uuid.UUID{} }
+func (b uuidBound) Value() (driver.Value, error)  { return b.val.String(), nil }
+
+type int64Bound struct{ val int64 }
+
+func (b int64Bound) Int64() int64                 { return b.val }
+func (b int64Bound) IsZero() bool                 { return b.val == 0 }
+func (b int64Bound) Value() (driver.Value, error)  { return b.val, nil }
+
+// FloorUUID returns the lowest valid UUIDv7 for timestamp t.
 // Any UUIDv7 generated at or after t will be >= FloorUUID(t).
-func FloorUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
+func FloorUUID(t time.Time) UUID {
 	ms := uint64(t.UnixMilli())
 	var u uuid.UUID
 	u[0] = byte(ms >> 40)
@@ -36,13 +47,12 @@ func FloorUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
 	u[5] = byte(ms)
 	u[6] = 0x70 // version 7
 	u[8] = 0x80 // variant 10xxxxxx
-	id, _ := typeid.UUIDFrom[P](u)
-	return id
+	return uuidBound{val: u}
 }
 
-// CeilUUID returns the highest valid UUID[P] for timestamp t.
+// CeilUUID returns the highest valid UUIDv7 for timestamp t.
 // Any UUIDv7 generated at or before t will be <= CeilUUID(t).
-func CeilUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
+func CeilUUID(t time.Time) UUID {
 	ms := uint64(t.UnixMilli())
 	var u uuid.UUID
 	u[0] = byte(ms >> 40)
@@ -57,24 +67,21 @@ func CeilUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
 	for i := 9; i < 16; i++ {
 		u[i] = 0xff
 	}
-	id, _ := typeid.UUIDFrom[P](u)
-	return id
+	return uuidBound{val: u}
 }
 
 const randomBits = 15
 
-// FloorInt64 returns the lowest valid Int64[P] for timestamp t.
-func FloorInt64[P typeid.Prefixer](t time.Time) typeid.Int64[P] {
+// FloorInt64 returns the lowest valid int64 ID for timestamp t.
+func FloorInt64(t time.Time) Int64 {
 	ms := t.UnixMilli()
-	id, _ := typeid.Int64From[P](ms << randomBits)
-	return id
+	return int64Bound{val: ms << randomBits}
 }
 
-// CeilInt64 returns the highest valid Int64[P] for timestamp t.
-func CeilInt64[P typeid.Prefixer](t time.Time) typeid.Int64[P] {
+// CeilInt64 returns the highest valid int64 ID for timestamp t.
+func CeilInt64(t time.Time) Int64 {
 	ms := t.UnixMilli()
-	id, _ := typeid.Int64From[P](ms<<randomBits | 0x7FFF)
-	return id
+	return int64Bound{val: ms<<randomBits | 0x7FFF}
 }
 
 type valuer interface{ Value() (driver.Value, error) }
@@ -87,33 +94,33 @@ type TimeRange[T valuer] struct {
 	ceil   *T
 }
 
-// UUIDRange returns a TimeRange for UUID[P] IDs over the given time window.
+// UUIDRange returns a TimeRange over UUID IDs for the given time window.
 // Nil since/until means unbounded on that side.
-func UUIDRange[P typeid.Prefixer](column string, since, until *time.Time) TimeRange[typeid.UUID[P]] {
-	var r TimeRange[typeid.UUID[P]]
+func UUIDRange(column string, since, until *time.Time) TimeRange[UUID] {
+	var r TimeRange[UUID]
 	r.column = column
 	if since != nil {
-		f := FloorUUID[P](*since)
+		f := FloorUUID(*since)
 		r.floor = &f
 	}
 	if until != nil {
-		c := CeilUUID[P](*until)
+		c := CeilUUID(*until)
 		r.ceil = &c
 	}
 	return r
 }
 
-// Int64Range returns a TimeRange for Int64[P] IDs over the given time window.
+// Int64Range returns a TimeRange over Int64 IDs for the given time window.
 // Nil since/until means unbounded on that side.
-func Int64Range[P typeid.Prefixer](column string, since, until *time.Time) TimeRange[typeid.Int64[P]] {
-	var r TimeRange[typeid.Int64[P]]
+func Int64Range(column string, since, until *time.Time) TimeRange[Int64] {
+	var r TimeRange[Int64]
 	r.column = column
 	if since != nil {
-		f := FloorInt64[P](*since)
+		f := FloorInt64(*since)
 		r.floor = &f
 	}
 	if until != nil {
-		c := CeilInt64[P](*until)
+		c := CeilInt64(*until)
 		r.ceil = &c
 	}
 	return r
