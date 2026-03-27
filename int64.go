@@ -108,6 +108,20 @@ func (id Int64[P]) Value() (driver.Value, error) {
 	return id.val, nil
 }
 
+func (id Int64[P]) GetTime() time.Time {
+	return time.UnixMilli(id.val >> randomBits)
+}
+
+// FloorInt64 returns the lowest valid Int64[P] for timestamp t.
+func FloorInt64[P Prefixer](t time.Time) Int64[P] {
+	return Int64[P]{val: t.UnixMilli() << randomBits}
+}
+
+// CeilInt64 returns the highest valid Int64[P] for timestamp t.
+func CeilInt64[P Prefixer](t time.Time) Int64[P] {
+	return Int64[P]{val: t.UnixMilli()<<randomBits | 0x7FFF}
+}
+
 func (id *Int64[P]) Scan(src any) error {
 	var v int64
 	switch sv := src.(type) {

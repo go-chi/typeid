@@ -3,6 +3,7 @@ package typeid
 import (
 	"database/sql/driver"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -73,6 +74,48 @@ func (id UUID[P]) Value() (driver.Value, error) {
 		return nil, ErrZeroUUID
 	}
 	return id.val.String(), nil
+}
+
+func (id UUID[P]) GetTime() time.Time {
+	return time.UnixMilli(uuidTimestamp(id.val))
+}
+
+func uuidTimestamp(u uuid.UUID) int64 {
+	return int64(u[0])<<40 | int64(u[1])<<32 | int64(u[2])<<24 | int64(u[3])<<16 | int64(u[4])<<8 | int64(u[5])
+}
+
+func setUUIDTimestamp(u *uuid.UUID, t time.Time) {
+	ms := uint64(t.UnixMilli())
+	u[0] = byte(ms >> 40)
+	u[1] = byte(ms >> 32)
+	u[2] = byte(ms >> 24)
+	u[3] = byte(ms >> 16)
+	u[4] = byte(ms >> 8)
+	u[5] = byte(ms)
+}
+
+// FloorUUID returns the lowest valid UUID[P] for timestamp t.
+// Any UUIDv7 generated at or after t will be >= FloorUUID(t).
+func FloorUUID[P Prefixer](t time.Time) UUID[P] {
+	var u uuid.UUID
+	setUUIDTimestamp(&u, t)
+	u[6] = 0x70 // version 7
+	u[8] = 0x80 // variant 10xxxxxx
+	return UUID[P]{val: u}
+}
+
+// CeilUUID returns the highest valid UUID[P] for timestamp t.
+// Any UUIDv7 generated at or before t will be <= CeilUUID(t).
+func CeilUUID[P Prefixer](t time.Time) UUID[P] {
+	var u uuid.UUID
+	setUUIDTimestamp(&u, t)
+	u[6] = 0x7f // version 7 + rand_a high nibble all 1s
+	u[7] = 0xff // rand_a low byte all 1s
+	u[8] = 0xbf // variant 10 + 6 bits all 1s
+	for i := 9; i < 16; i++ {
+		u[i] = 0xff
+	}
+	return UUID[P]{val: u}
 }
 
 func (id *UUID[P]) Scan(src any) (err error) {
