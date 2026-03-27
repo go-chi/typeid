@@ -1,16 +1,31 @@
-package typeid
+package timerange
 
 import (
 	"database/sql/driver"
 	"fmt"
 	"time"
 
+	"github.com/go-chi/typeid"
 	"github.com/google/uuid"
 )
 
+// UUID is satisfied by any typeid.UUID[P] regardless of prefix.
+type UUID interface {
+	UUID() uuid.UUID
+	IsZero() bool
+	Value() (driver.Value, error)
+}
+
+// Int64 is satisfied by any typeid.Int64[P] regardless of prefix.
+type Int64 interface {
+	Int64() int64
+	IsZero() bool
+	Value() (driver.Value, error)
+}
+
 // FloorUUID returns the lowest valid UUID[P] for timestamp t.
 // Any UUIDv7 generated at or after t will be >= FloorUUID(t).
-func FloorUUID[P Prefixer](t time.Time) UUID[P] {
+func FloorUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
 	ms := uint64(t.UnixMilli())
 	var u uuid.UUID
 	u[0] = byte(ms >> 40)
@@ -21,12 +36,13 @@ func FloorUUID[P Prefixer](t time.Time) UUID[P] {
 	u[5] = byte(ms)
 	u[6] = 0x70 // version 7
 	u[8] = 0x80 // variant 10xxxxxx
-	return UUID[P]{val: u}
+	id, _ := typeid.UUIDFrom[P](u)
+	return id
 }
 
 // CeilUUID returns the highest valid UUID[P] for timestamp t.
 // Any UUIDv7 generated at or before t will be <= CeilUUID(t).
-func CeilUUID[P Prefixer](t time.Time) UUID[P] {
+func CeilUUID[P typeid.Prefixer](t time.Time) typeid.UUID[P] {
 	ms := uint64(t.UnixMilli())
 	var u uuid.UUID
 	u[0] = byte(ms >> 40)
@@ -41,19 +57,24 @@ func CeilUUID[P Prefixer](t time.Time) UUID[P] {
 	for i := 9; i < 16; i++ {
 		u[i] = 0xff
 	}
-	return UUID[P]{val: u}
+	id, _ := typeid.UUIDFrom[P](u)
+	return id
 }
 
+const randomBits = 15
+
 // FloorInt64 returns the lowest valid Int64[P] for timestamp t.
-func FloorInt64[P Prefixer](t time.Time) Int64[P] {
+func FloorInt64[P typeid.Prefixer](t time.Time) typeid.Int64[P] {
 	ms := t.UnixMilli()
-	return Int64[P]{val: ms << randomBits}
+	id, _ := typeid.Int64From[P](ms << randomBits)
+	return id
 }
 
 // CeilInt64 returns the highest valid Int64[P] for timestamp t.
-func CeilInt64[P Prefixer](t time.Time) Int64[P] {
+func CeilInt64[P typeid.Prefixer](t time.Time) typeid.Int64[P] {
 	ms := t.UnixMilli()
-	return Int64[P]{val: ms<<randomBits | 0x7FFF}
+	id, _ := typeid.Int64From[P](ms<<randomBits | 0x7FFF)
+	return id
 }
 
 type valuer interface{ Value() (driver.Value, error) }
@@ -68,8 +89,8 @@ type TimeRange[T valuer] struct {
 
 // UUIDRange returns a TimeRange for UUID[P] IDs over the given time window.
 // Nil since/until means unbounded on that side.
-func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange[UUID[P]] {
-	var r TimeRange[UUID[P]]
+func UUIDRange[P typeid.Prefixer](column string, since, until *time.Time) TimeRange[typeid.UUID[P]] {
+	var r TimeRange[typeid.UUID[P]]
 	r.column = column
 	if since != nil {
 		f := FloorUUID[P](*since)
@@ -84,8 +105,8 @@ func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange[UUI
 
 // Int64Range returns a TimeRange for Int64[P] IDs over the given time window.
 // Nil since/until means unbounded on that side.
-func Int64Range[P Prefixer](column string, since, until *time.Time) TimeRange[Int64[P]] {
-	var r TimeRange[Int64[P]]
+func Int64Range[P typeid.Prefixer](column string, since, until *time.Time) TimeRange[typeid.Int64[P]] {
+	var r TimeRange[typeid.Int64[P]]
 	r.column = column
 	if since != nil {
 		f := FloorInt64[P](*since)
@@ -115,7 +136,7 @@ func (r TimeRange[T]) Ceil() (T, bool) {
 }
 
 // ToSql satisfies squirrel.Sqlizer structurally (no import needed).
-func (r TimeRange[T]) ToSql() (string, []interface{}, error) {
+func (r TimeRange[T]) ToSql() (string, []any, error) {
 	switch {
 	case r.floor != nil && r.ceil != nil:
 		fv, err := (*r.floor).Value()
