@@ -20,7 +20,7 @@ func (orgPrefix) Prefix() string { return "org" }
 func TestFloorUUID(t *testing.T) {
 	now := time.Now()
 	floor := timerange.FloorUUID(now)
-	u := floor.UUID()
+	u := floor.Get()
 
 	if u.Version() != 7 {
 		t.Fatalf("version = %d, want 7", u.Version())
@@ -46,15 +46,15 @@ func TestCeilUUID(t *testing.T) {
 	ceil := timerange.CeilUUID(now)
 	floor := timerange.FloorUUID(now)
 
-	u := ceil.UUID()
+	u := ceil.Get()
 	if u.Version() != 7 {
 		t.Fatalf("version = %d, want 7", u.Version())
 	}
 	if u.Variant() != uuid.RFC4122 {
 		t.Fatalf("variant = %d, want RFC4122", u.Variant())
 	}
-	if ceil.UUID().String() < floor.UUID().String() {
-		t.Fatalf("ceil %s < floor %s", ceil.UUID(), floor.UUID())
+	if ceil.Get().String() < floor.Get().String() {
+		t.Fatalf("ceil %s < floor %s", ceil.Get(), floor.Get())
 	}
 }
 
@@ -70,20 +70,45 @@ func TestFloorCeilUUID_Bracket(t *testing.T) {
 	floor := timerange.FloorUUID(ts)
 	ceil := timerange.CeilUUID(ts)
 
-	if floor.UUID().String() > u.String() {
-		t.Fatalf("floor %s > id %s", floor.UUID(), u)
+	if floor.Get().String() > u.String() {
+		t.Fatalf("floor %s > id %s", floor.Get(), u)
 	}
-	if ceil.UUID().String() < u.String() {
-		t.Fatalf("ceil %s < id %s", ceil.UUID(), u)
+	if ceil.Get().String() < u.String() {
+		t.Fatalf("ceil %s < id %s", ceil.Get(), u)
 	}
 }
 
 func TestFloorUUID_TimestampRoundTrip(t *testing.T) {
 	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
 	floor := timerange.FloorUUID(ts)
-	got := extractUUIDTimestamp(floor.UUID())
+	got := extractUUIDTimestamp(floor.Get())
 	if got != ts.UnixMilli() {
 		t.Fatalf("timestamp = %d, want %d", got, ts.UnixMilli())
+	}
+}
+
+func TestFloorUUID_GetTime(t *testing.T) {
+	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+	floor := timerange.FloorUUID(ts)
+	if got := floor.GetTime(); got.UnixMilli() != ts.UnixMilli() {
+		t.Fatalf("GetTime() = %v, want %v", got, ts)
+	}
+}
+
+func TestUUID_FloorCeilMethods(t *testing.T) {
+	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+	ceil := timerange.CeilUUID(ts)
+
+	// ceil.Floor() should give the floor for the same millisecond.
+	floor := ceil.Floor()
+	if floor.Get().Version() != 7 {
+		t.Fatalf("floor version = %d, want 7", floor.Get().Version())
+	}
+	if floor.Get().String() > ceil.Get().String() {
+		t.Fatalf("floor %s > ceil %s", floor.Get(), ceil.Get())
+	}
+	if floor.GetTime().UnixMilli() != ceil.GetTime().UnixMilli() {
+		t.Fatal("floor and ceil have different timestamps")
 	}
 }
 
@@ -96,8 +121,8 @@ func TestFloorInt64(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if id.Int64() < floor.Int64() {
-			t.Fatalf("NewInt64 %d < floor %d", id.Int64(), floor.Int64())
+		if id.Int64() < floor.Get() {
+			t.Fatalf("NewInt64 %d < floor %d", id.Int64(), floor.Get())
 		}
 	}
 }
@@ -107,8 +132,8 @@ func TestCeilInt64(t *testing.T) {
 	ceil := timerange.CeilInt64(now)
 	floor := timerange.FloorInt64(now)
 
-	if ceil.Int64() < floor.Int64() {
-		t.Fatalf("ceil %d < floor %d", ceil.Int64(), floor.Int64())
+	if ceil.Get() < floor.Get() {
+		t.Fatalf("ceil %d < floor %d", ceil.Get(), floor.Get())
 	}
 }
 
@@ -124,11 +149,19 @@ func TestFloorCeilInt64_Bracket(t *testing.T) {
 	floor := timerange.FloorInt64(ts)
 	ceil := timerange.CeilInt64(ts)
 
-	if floor.Int64() > v {
-		t.Fatalf("floor %d > id %d", floor.Int64(), v)
+	if floor.Get() > v {
+		t.Fatalf("floor %d > id %d", floor.Get(), v)
 	}
-	if ceil.Int64() < v {
-		t.Fatalf("ceil %d < id %d", ceil.Int64(), v)
+	if ceil.Get() < v {
+		t.Fatalf("ceil %d < id %d", ceil.Get(), v)
+	}
+}
+
+func TestInt64_GetTime(t *testing.T) {
+	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
+	floor := timerange.FloorInt64(ts)
+	if got := floor.GetTime(); got.UnixMilli() != ts.UnixMilli() {
+		t.Fatalf("GetTime() = %v, want %v", got, ts)
 	}
 }
 

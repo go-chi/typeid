@@ -8,97 +8,117 @@ import (
 	"github.com/google/uuid"
 )
 
-// UUID represents a UUIDv7 value with time-based boundary operations.
-type UUID interface {
-	UUID() uuid.UUID
-	IsZero() bool
-	Value() (driver.Value, error)
-	GetTime() time.Time
-	Floor() UUID
-	Ceil() UUID
+// ID is a time-based identifier value with boundary operations.
+type ID[T int64 | uuid.UUID] struct{ val T }
+
+// UUID is an ID holding a uuid.UUID value.
+type UUID = ID[uuid.UUID]
+
+// Int64 is an ID holding an int64 value.
+type Int64 = ID[int64]
+
+const randomBits = 15
+
+func (id ID[T]) Get() T    { return id.val }
+func (id ID[T]) IsZero() bool {
+	switch v := any(id.val).(type) {
+	case int64:
+		return v == 0
+	case uuid.UUID:
+		return v == uuid.UUID{}
+	}
+	return false
 }
 
-// Int64 represents an int64 ID value with time-based boundary operations.
-type Int64 interface {
-	Int64() int64
-	IsZero() bool
-	Value() (driver.Value, error)
-	GetTime() time.Time
-	Floor() Int64
-	Ceil() Int64
+func (id ID[T]) Value() (driver.Value, error) {
+	switch v := any(id.val).(type) {
+	case int64:
+		return v, nil
+	case uuid.UUID:
+		return v.String(), nil
+	}
+	return nil, nil
 }
 
-type uuidValue struct{ val uuid.UUID }
+func (id ID[T]) GetTime() time.Time {
+	switch v := any(id.val).(type) {
+	case int64:
+		return time.UnixMilli(v >> randomBits)
+	case uuid.UUID:
+		return time.UnixMilli(uuidTimestamp(v))
+	}
+	return time.Time{}
+}
 
-func (b uuidValue) UUID() uuid.UUID              { return b.val }
-func (b uuidValue) IsZero() bool                 { return b.val == uuid.UUID{} }
-func (b uuidValue) Value() (driver.Value, error) { return b.val.String(), nil }
-func (b uuidValue) GetTime() time.Time           { return time.UnixMilli(uuidTimestamp(b.val)) }
-func (b uuidValue) Floor() UUID                  { return FloorUUID(b.GetTime()) }
-func (b uuidValue) Ceil() UUID                   { return CeilUUID(b.GetTime()) }
+func (id ID[T]) Floor() ID[T] {
+	t := id.GetTime()
+	switch any(id.val).(type) {
+	case int64:
+		return ID[T]{val: any(t.UnixMilli() << randomBits).(T)}
+	case uuid.UUID:
+		return ID[T]{val: any(floorUUIDBytes(t)).(T)}
+	}
+	return ID[T]{}
+}
 
-type int64Value struct{ val int64 }
-
-func (b int64Value) Int64() int64                 { return b.val }
-func (b int64Value) IsZero() bool                 { return b.val == 0 }
-func (b int64Value) Value() (driver.Value, error) { return b.val, nil }
-func (b int64Value) GetTime() time.Time           { return time.UnixMilli(b.val >> randomBits) }
-func (b int64Value) Floor() Int64                 { return FloorInt64(b.GetTime()) }
-func (b int64Value) Ceil() Int64                  { return CeilInt64(b.GetTime()) }
+func (id ID[T]) Ceil() ID[T] {
+	t := id.GetTime()
+	switch any(id.val).(type) {
+	case int64:
+		return ID[T]{val: any(t.UnixMilli()<<randomBits | 0x7FFF).(T)}
+	case uuid.UUID:
+		return ID[T]{val: any(ceilUUIDBytes(t)).(T)}
+	}
+	return ID[T]{}
+}
 
 func uuidTimestamp(u uuid.UUID) int64 {
 	return int64(u[0])<<40 | int64(u[1])<<32 | int64(u[2])<<24 | int64(u[3])<<16 | int64(u[4])<<8 | int64(u[5])
 }
 
-// FloorUUID returns the lowest valid UUIDv7 for timestamp t.
-// Any UUIDv7 generated at or after t will be >= FloorUUID(t).
-func FloorUUID(t time.Time) UUID {
+func setTimestamp(u *uuid.UUID, t time.Time) {
 	ms := uint64(t.UnixMilli())
-	var u uuid.UUID
 	u[0] = byte(ms >> 40)
 	u[1] = byte(ms >> 32)
 	u[2] = byte(ms >> 24)
 	u[3] = byte(ms >> 16)
 	u[4] = byte(ms >> 8)
 	u[5] = byte(ms)
-	u[6] = 0x70 // version 7
-	u[8] = 0x80 // variant 10xxxxxx
-	return uuidValue{val: u}
 }
 
-// CeilUUID returns the highest valid UUIDv7 for timestamp t.
-// Any UUIDv7 generated at or before t will be <= CeilUUID(t).
-func CeilUUID(t time.Time) UUID {
-	ms := uint64(t.UnixMilli())
+func floorUUIDBytes(t time.Time) uuid.UUID {
 	var u uuid.UUID
-	u[0] = byte(ms >> 40)
-	u[1] = byte(ms >> 32)
-	u[2] = byte(ms >> 24)
-	u[3] = byte(ms >> 16)
-	u[4] = byte(ms >> 8)
-	u[5] = byte(ms)
+	setTimestamp(&u, t)
+	u[6] = 0x70 // version 7
+	u[8] = 0x80 // variant 10xxxxxx
+	return u
+}
+
+func ceilUUIDBytes(t time.Time) uuid.UUID {
+	var u uuid.UUID
+	setTimestamp(&u, t)
 	u[6] = 0x7f // version 7 + rand_a high nibble all 1s
 	u[7] = 0xff // rand_a low byte all 1s
 	u[8] = 0xbf // variant 10 + 6 bits all 1s
 	for i := 9; i < 16; i++ {
 		u[i] = 0xff
 	}
-	return uuidValue{val: u}
+	return u
 }
 
-const randomBits = 15
+// FloorUUID returns the lowest valid UUIDv7 for timestamp t.
+// Any UUIDv7 generated at or after t will be >= FloorUUID(t).
+func FloorUUID(t time.Time) UUID { return UUID{val: floorUUIDBytes(t)} }
+
+// CeilUUID returns the highest valid UUIDv7 for timestamp t.
+// Any UUIDv7 generated at or before t will be <= CeilUUID(t).
+func CeilUUID(t time.Time) UUID { return UUID{val: ceilUUIDBytes(t)} }
 
 // FloorInt64 returns the lowest valid int64 ID for timestamp t.
-func FloorInt64(t time.Time) Int64 {
-	ms := t.UnixMilli()
-	return int64Value{val: ms << randomBits}
-}
+func FloorInt64(t time.Time) Int64 { return Int64{val: t.UnixMilli() << randomBits} }
 
 // CeilInt64 returns the highest valid int64 ID for timestamp t.
-func CeilInt64(t time.Time) Int64 {
-	ms := t.UnixMilli()
-	return int64Value{val: ms<<randomBits | 0x7FFF}
-}
+func CeilInt64(t time.Time) Int64 { return Int64{val: t.UnixMilli()<<randomBits | 0x7FFF} }
 
 // TimeRange holds optional floor/ceil bounds for time-based ID range queries.
 // It satisfies squirrel.Sqlizer structurally via ToSql.
