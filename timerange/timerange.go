@@ -8,18 +8,24 @@ import (
 	"github.com/google/uuid"
 )
 
-// UUID is satisfied by any typeid.UUID[P] regardless of prefix.
+// UUID represents a UUIDv7 value with time-based boundary operations.
 type UUID interface {
 	UUID() uuid.UUID
 	IsZero() bool
 	Value() (driver.Value, error)
+	GetTime() time.Time
+	Floor() UUID
+	Ceil() UUID
 }
 
-// Int64 is satisfied by any typeid.Int64[P] regardless of prefix.
+// Int64 represents an int64 ID value with time-based boundary operations.
 type Int64 interface {
 	Int64() int64
 	IsZero() bool
 	Value() (driver.Value, error)
+	GetTime() time.Time
+	Floor() Int64
+	Ceil() Int64
 }
 
 type uuidValue struct{ val uuid.UUID }
@@ -27,12 +33,22 @@ type uuidValue struct{ val uuid.UUID }
 func (b uuidValue) UUID() uuid.UUID              { return b.val }
 func (b uuidValue) IsZero() bool                 { return b.val == uuid.UUID{} }
 func (b uuidValue) Value() (driver.Value, error) { return b.val.String(), nil }
+func (b uuidValue) GetTime() time.Time           { return time.UnixMilli(uuidTimestamp(b.val)) }
+func (b uuidValue) Floor() UUID                  { return FloorUUID(b.GetTime()) }
+func (b uuidValue) Ceil() UUID                   { return CeilUUID(b.GetTime()) }
 
 type int64Value struct{ val int64 }
 
 func (b int64Value) Int64() int64                 { return b.val }
 func (b int64Value) IsZero() bool                 { return b.val == 0 }
 func (b int64Value) Value() (driver.Value, error) { return b.val, nil }
+func (b int64Value) GetTime() time.Time           { return time.UnixMilli(b.val >> randomBits) }
+func (b int64Value) Floor() Int64                 { return FloorInt64(b.GetTime()) }
+func (b int64Value) Ceil() Int64                  { return CeilInt64(b.GetTime()) }
+
+func uuidTimestamp(u uuid.UUID) int64 {
+	return int64(u[0])<<40 | int64(u[1])<<32 | int64(u[2])<<24 | int64(u[3])<<16 | int64(u[4])<<8 | int64(u[5])
+}
 
 // FloorUUID returns the lowest valid UUIDv7 for timestamp t.
 // Any UUIDv7 generated at or after t will be >= FloorUUID(t).

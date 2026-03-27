@@ -228,10 +228,6 @@ func TestTimeRange_FloorCeil_Accessors(t *testing.T) {
 	}
 }
 
-// Verify typeid types satisfy the interfaces.
-var _ timerange.UUID = typeid.UUID[userPrefix]{}
-var _ timerange.Int64 = typeid.Int64[orgPrefix]{}
-
 func extractUUIDTimestamp(u uuid.UUID) int64 {
 	var ms int64
 	ms |= int64(u[0]) << 40
