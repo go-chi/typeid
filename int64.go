@@ -46,6 +46,7 @@ type Int64[P Prefixer] struct {
 	val int64
 }
 
+// NewInt64 generates a fresh time-ordered identifier with the given prefix.
 func NewInt64[P Prefixer]() (Int64[P], error) {
 	ms := time.Now().UnixMilli()
 
@@ -58,6 +59,7 @@ func NewInt64[P Prefixer]() (Int64[P], error) {
 	return Int64[P]{val: (ms << randomBits) | r}, nil
 }
 
+// Int64From wraps an existing int64 value, returning an error if it is not positive.
 func Int64From[P Prefixer](v int64) (Int64[P], error) {
 	if v <= 0 {
 		return Int64[P]{}, ErrNonPositiveInt
@@ -65,6 +67,7 @@ func Int64From[P Prefixer](v int64) (Int64[P], error) {
 	return Int64[P]{val: v}, nil
 }
 
+// ParseInt64 decodes a "prefix_<base32>" string into a typed Int64.
 func ParseInt64[P Prefixer](s string) (Int64[P], error) {
 	suffix, err := splitTypeid[P](s, int64SuffixLen)
 	if err != nil {
@@ -108,16 +111,21 @@ func (id Int64[P]) Value() (driver.Value, error) {
 	return id.val, nil
 }
 
+// GetTime extracts the millisecond-precision creation timestamp from the ID.
 func (id Int64[P]) GetTime() time.Time {
 	return time.UnixMilli(id.val >> randomBits)
 }
 
-// FloorInt64 returns the lowest valid Int64[P] for timestamp t.
+// FloorInt64 returns the lowest possible Int64[P] for timestamp t.
+// All 15 random bits are zero. Useful as the lower bound in range queries:
+// WHERE id >= FloorInt64(since).
 func FloorInt64[P Prefixer](t time.Time) Int64[P] {
 	return Int64[P]{val: t.UnixMilli() << randomBits}
 }
 
-// CeilInt64 returns the highest valid Int64[P] for timestamp t.
+// CeilInt64 returns the highest possible Int64[P] for timestamp t.
+// All 15 random bits are one. Useful as the upper bound in range queries:
+// WHERE id <= CeilInt64(until).
 func CeilInt64[P Prefixer](t time.Time) Int64[P] {
 	return Int64[P]{val: t.UnixMilli()<<randomBits | 0x7FFF}
 }

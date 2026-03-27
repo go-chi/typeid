@@ -6,16 +6,20 @@ import (
 	"time"
 )
 
-// TimeRange holds optional floor/ceil bounds for time-based ID range queries.
-// It satisfies squirrel.Sqlizer structurally via ToSql.
+// TimeRange holds optional floor/ceil bounds for time-based ID range queries
+// against a primary key column. It satisfies squirrel.Sqlizer structurally
+// via [TimeRange.ToSql], so it can be passed directly to squirrel.Where
+// without importing squirrel in this package.
+//
+// Construct via [UUIDRange] or [Int64Range].
 type TimeRange struct {
 	column string
 	floor  driver.Valuer
 	ceil   driver.Valuer
 }
 
-// UUIDRange returns a TimeRange over UUID[P] IDs for the given time window.
-// Nil since/until means unbounded on that side.
+// UUIDRange builds a [TimeRange] that brackets column with [FloorUUID] / [CeilUUID].
+// Nil since or until leaves that side unbounded.
 func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange {
 	r := TimeRange{column: column}
 	if since != nil {
@@ -27,8 +31,8 @@ func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange {
 	return r
 }
 
-// Int64Range returns a TimeRange over Int64[P] IDs for the given time window.
-// Nil since/until means unbounded on that side.
+// Int64Range builds a [TimeRange] that brackets column with [FloorInt64] / [CeilInt64].
+// Nil since or until leaves that side unbounded.
 func Int64Range[P Prefixer](column string, since, until *time.Time) TimeRange {
 	r := TimeRange{column: column}
 	if since != nil {
@@ -40,10 +44,15 @@ func Int64Range[P Prefixer](column string, since, until *time.Time) TimeRange {
 	return r
 }
 
+// Floor returns the lower-bound ID and true, or (nil, false) if unbounded.
 func (r TimeRange) Floor() (driver.Valuer, bool) { return r.floor, r.floor != nil }
-func (r TimeRange) Ceil() (driver.Valuer, bool)  { return r.ceil, r.ceil != nil }
 
-// ToSql satisfies squirrel.Sqlizer structurally (no import needed).
+// Ceil returns the upper-bound ID and true, or (nil, false) if unbounded.
+func (r TimeRange) Ceil() (driver.Valuer, bool) { return r.ceil, r.ceil != nil }
+
+// ToSql emits a SQL predicate and bind args for the range.
+// Returns "column BETWEEN ? AND ?", "column >= ?", "column <= ?",
+// or "1=1" depending on which bounds are set.
 func (r TimeRange) ToSql() (string, []any, error) {
 	switch {
 	case r.floor != nil && r.ceil != nil:

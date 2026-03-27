@@ -14,6 +14,7 @@ type UUID[P Prefixer] struct {
 	val uuid.UUID
 }
 
+// NewUUID generates a fresh UUIDv7-backed identifier with the given prefix.
 func NewUUID[P Prefixer]() (UUID[P], error) {
 	u, err := uuid.NewV7()
 	if err != nil {
@@ -22,6 +23,7 @@ func NewUUID[P Prefixer]() (UUID[P], error) {
 	return UUID[P]{val: u}, nil
 }
 
+// UUIDFrom wraps an existing uuid.UUID, returning an error if it is not v7.
 func UUIDFrom[P Prefixer](u uuid.UUID) (UUID[P], error) {
 	if u.Version() != 7 {
 		return UUID[P]{}, ErrOnlyV7
@@ -29,6 +31,7 @@ func UUIDFrom[P Prefixer](u uuid.UUID) (UUID[P], error) {
 	return UUID[P]{val: u}, nil
 }
 
+// ParseUUID decodes a "prefix_<base32>" string into a typed UUID.
 func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 	suffix, err := splitTypeid[P](s, uuidSuffixLen)
 	if err != nil {
@@ -76,6 +79,7 @@ func (id UUID[P]) Value() (driver.Value, error) {
 	return id.val.String(), nil
 }
 
+// GetTime extracts the millisecond-precision creation timestamp from the UUIDv7.
 func (id UUID[P]) GetTime() time.Time {
 	return time.UnixMilli(uuidTimestamp(id.val))
 }
@@ -94,8 +98,9 @@ func setUUIDTimestamp(u *uuid.UUID, t time.Time) {
 	u[5] = byte(ms)
 }
 
-// FloorUUID returns the lowest valid UUID[P] for timestamp t.
-// Any UUIDv7 generated at or after t will be >= FloorUUID(t).
+// FloorUUID returns the lowest possible UUID[P] for timestamp t.
+// All random and variant bits are minimized. Useful as the lower bound
+// in range queries: WHERE id >= FloorUUID(since).
 func FloorUUID[P Prefixer](t time.Time) UUID[P] {
 	var u uuid.UUID
 	setUUIDTimestamp(&u, t)
@@ -104,8 +109,9 @@ func FloorUUID[P Prefixer](t time.Time) UUID[P] {
 	return UUID[P]{val: u}
 }
 
-// CeilUUID returns the highest valid UUID[P] for timestamp t.
-// Any UUIDv7 generated at or before t will be <= CeilUUID(t).
+// CeilUUID returns the highest possible UUID[P] for timestamp t.
+// All random and variant bits are maximized. Useful as the upper bound
+// in range queries: WHERE id <= CeilUUID(until).
 func CeilUUID[P Prefixer](t time.Time) UUID[P] {
 	var u uuid.UUID
 	setUUIDTimestamp(&u, t)
