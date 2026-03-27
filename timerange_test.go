@@ -5,126 +5,33 @@ import (
 	"time"
 
 	"github.com/go-chi/typeid"
-	"github.com/google/uuid"
 )
 
-func TestFloorUUID(t *testing.T) {
-	now := time.Now()
-	floor := typeid.FloorUUID[userPrefix](now)
-	u := floor.UUID()
-
-	if u.Version() != 7 {
-		t.Fatalf("version = %d, want 7", u.Version())
-	}
-	if u.Variant() != uuid.RFC4122 {
-		t.Fatalf("variant = %d, want RFC4122", u.Variant())
-	}
-
-	// Any UUIDv7 generated after now must be >= floor.
-	for range 100 {
-		id, err := typeid.NewUUID[userPrefix]()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if id.UUID().String() < u.String() {
-			t.Fatalf("NewUUID %s < floor %s", id.UUID(), u)
-		}
-	}
-}
-
-func TestCeilUUID(t *testing.T) {
-	now := time.Now()
-	ceil := typeid.CeilUUID[userPrefix](now)
-	floor := typeid.FloorUUID[userPrefix](now)
-
-	u := ceil.UUID()
-	if u.Version() != 7 {
-		t.Fatalf("version = %d, want 7", u.Version())
-	}
-	if u.Variant() != uuid.RFC4122 {
-		t.Fatalf("variant = %d, want RFC4122", u.Variant())
-	}
-	if ceil.UUID().String() < floor.UUID().String() {
-		t.Fatalf("ceil %s < floor %s", ceil.UUID(), floor.UUID())
-	}
-}
-
-func TestFloorCeilUUID_Bracket(t *testing.T) {
+func TestUUID_GetTime(t *testing.T) {
 	id, err := typeid.NewUUID[userPrefix]()
 	if err != nil {
 		t.Fatal(err)
 	}
-	u := id.UUID()
-	ts := id.GetTime()
-
-	floor := typeid.FloorUUID[userPrefix](ts)
-	ceil := typeid.CeilUUID[userPrefix](ts)
-
-	if floor.UUID().String() > u.String() {
-		t.Fatalf("floor %s > id %s", floor.UUID(), u)
+	got := id.GetTime()
+	if got.IsZero() {
+		t.Fatal("GetTime() returned zero")
 	}
-	if ceil.UUID().String() < u.String() {
-		t.Fatalf("ceil %s < id %s", ceil.UUID(), u)
-	}
-}
-
-func TestFloorUUID_TimestampRoundTrip(t *testing.T) {
-	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
-	floor := typeid.FloorUUID[userPrefix](ts)
-	if got := floor.GetTime(); got.UnixMilli() != ts.UnixMilli() {
-		t.Fatalf("GetTime() = %v, want %v", got, ts)
-	}
-}
-
-func TestFloorInt64(t *testing.T) {
-	now := time.Now()
-	floor := typeid.FloorInt64[orgPrefix](now)
-
-	for range 100 {
-		id, err := typeid.NewInt64[orgPrefix]()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if id.Int64() < floor.Int64() {
-			t.Fatalf("NewInt64 %d < floor %d", id.Int64(), floor.Int64())
-		}
-	}
-}
-
-func TestCeilInt64(t *testing.T) {
-	now := time.Now()
-	ceil := typeid.CeilInt64[orgPrefix](now)
-	floor := typeid.FloorInt64[orgPrefix](now)
-
-	if ceil.Int64() < floor.Int64() {
-		t.Fatalf("ceil %d < floor %d", ceil.Int64(), floor.Int64())
-	}
-}
-
-func TestFloorCeilInt64_Bracket(t *testing.T) {
-	id, err := typeid.NewInt64[orgPrefix]()
-	if err != nil {
-		t.Fatal(err)
-	}
-	v := id.Int64()
-	ts := id.GetTime()
-
-	floor := typeid.FloorInt64[orgPrefix](ts)
-	ceil := typeid.CeilInt64[orgPrefix](ts)
-
-	if floor.Int64() > v {
-		t.Fatalf("floor %d > id %d", floor.Int64(), v)
-	}
-	if ceil.Int64() < v {
-		t.Fatalf("ceil %d < id %d", ceil.Int64(), v)
+	if time.Since(got) > time.Second {
+		t.Fatalf("GetTime() = %v, too far from now", got)
 	}
 }
 
 func TestInt64_GetTime(t *testing.T) {
-	ts := time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)
-	floor := typeid.FloorInt64[orgPrefix](ts)
-	if got := floor.GetTime(); got.UnixMilli() != ts.UnixMilli() {
-		t.Fatalf("GetTime() = %v, want %v", got, ts)
+	id, err := typeid.NewInt64[orgPrefix]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := id.GetTime()
+	if got.IsZero() {
+		t.Fatal("GetTime() returned zero")
+	}
+	if time.Since(got) > time.Second {
+		t.Fatalf("GetTime() = %v, too far from now", got)
 	}
 }
 

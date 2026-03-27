@@ -23,10 +23,10 @@ type TimeRange struct {
 func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange {
 	r := TimeRange{column: column}
 	if since != nil {
-		r.floor = FloorUUID[P](*since)
+		r.floor = floorUUID[P](*since)
 	}
 	if until != nil {
-		r.ceil = CeilUUID[P](*until)
+		r.ceil = ceilUUID[P](*until)
 	}
 	return r
 }
@@ -36,10 +36,10 @@ func UUIDRange[P Prefixer](column string, since, until *time.Time) TimeRange {
 func Int64Range[P Prefixer](column string, since, until *time.Time) TimeRange {
 	r := TimeRange{column: column}
 	if since != nil {
-		r.floor = FloorInt64[P](*since)
+		r.floor = floorInt64[P](*since)
 	}
 	if until != nil {
-		r.ceil = CeilInt64[P](*until)
+		r.ceil = ceilInt64[P](*until)
 	}
 	return r
 }

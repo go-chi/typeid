@@ -116,17 +116,15 @@ func (id Int64[P]) GetTime() time.Time {
 	return time.UnixMilli(id.val >> randomBits)
 }
 
-// FloorInt64 returns the lowest possible Int64[P] for timestamp t.
-// All 15 random bits are zero. Useful as the lower bound in range queries:
-// WHERE id >= FloorInt64(since).
-func FloorInt64[P Prefixer](t time.Time) Int64[P] {
+// floorInt64 returns the lowest possible Int64[P] for timestamp t.
+// All 15 random bits are zero.
+func floorInt64[P Prefixer](t time.Time) Int64[P] {
 	return Int64[P]{val: t.UnixMilli() << randomBits}
 }
 
-// CeilInt64 returns the highest possible Int64[P] for timestamp t.
-// All 15 random bits are one. Useful as the upper bound in range queries:
-// WHERE id <= CeilInt64(until).
-func CeilInt64[P Prefixer](t time.Time) Int64[P] {
+// ceilInt64 returns the highest possible Int64[P] for timestamp t.
+// All 15 random bits are one.
+func ceilInt64[P Prefixer](t time.Time) Int64[P] {
 	return Int64[P]{val: t.UnixMilli()<<randomBits | 0x7FFF}
 }
 

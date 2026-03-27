@@ -98,10 +98,9 @@ func setUUIDTimestamp(u *uuid.UUID, t time.Time) {
 	u[5] = byte(ms)
 }
 
-// FloorUUID returns the lowest possible UUID[P] for timestamp t.
-// All random and variant bits are minimized. Useful as the lower bound
-// in range queries: WHERE id >= FloorUUID(since).
-func FloorUUID[P Prefixer](t time.Time) UUID[P] {
+// floorUUID returns the lowest possible UUID[P] for timestamp t.
+// All random and variant bits are minimized.
+func floorUUID[P Prefixer](t time.Time) UUID[P] {
 	var u uuid.UUID
 	setUUIDTimestamp(&u, t)
 	u[6] = 0x70 // version 7
@@ -109,10 +108,9 @@ func FloorUUID[P Prefixer](t time.Time) UUID[P] {
 	return UUID[P]{val: u}
 }
 
-// CeilUUID returns the highest possible UUID[P] for timestamp t.
-// All random and variant bits are maximized. Useful as the upper bound
-// in range queries: WHERE id <= CeilUUID(until).
-func CeilUUID[P Prefixer](t time.Time) UUID[P] {
+// ceilUUID returns the highest possible UUID[P] for timestamp t.
+// All random and variant bits are maximized.
+func ceilUUID[P Prefixer](t time.Time) UUID[P] {
 	var u uuid.UUID
 	setUUIDTimestamp(&u, t)
 	u[6] = 0x7f // version 7 + rand_a high nibble all 1s
