@@ -238,6 +238,102 @@ func BenchmarkInt64_Parse(b *testing.B) {
 	}
 }
 
+// ExampleAnyInt64_switchToTypedInt64 narrows [AnyInt64] to [Int64] after a prefix switch.
+func ExampleAnyInt64_switchToTypedInt64() {
+	const payload = `{"id":"org_01hf7yat00c1s"}`
+	type Request struct {
+		ID typeid.AnyInt64 `json:"id"`
+	}
+	var req Request
+	if err := json.Unmarshal([]byte(payload), &req); err != nil {
+		fmt.Println("unmarshal:", err)
+		return
+	}
+
+	var orgID OrgID
+	var err error
+	switch req.ID.Prefix() {
+	case "org":
+		orgID, err = typeid.Int64From[orgPrefix](req.ID.Int64())
+	default:
+		fmt.Println("unknown prefix")
+		return
+	}
+	if err != nil {
+		fmt.Println("narrow:", err)
+		return
+	}
+	fmt.Println(orgID.String())
+	// Output:
+	// org_01hf7yat00c1s
+}
+
+func TestAnyInt64_json(t *testing.T) {
+	type Request struct {
+		ID typeid.AnyInt64 `json:"id"`
+	}
+
+	suffix := "01hf7yat00c1s"
+	inputs := []string{
+		`{"id":"whatever_` + suffix + `"}`,
+		`{"id":"other_prefix_` + suffix + `"}`,
+		`{"id":"` + suffix + `"}`,
+	}
+	for _, raw := range inputs {
+		var req Request
+		if err := json.Unmarshal([]byte(raw), &req); err != nil {
+			t.Fatalf("Unmarshal %s: %v", raw, err)
+		}
+		if req.ID.Int64() <= 0 {
+			t.Fatalf("expected positive Int64, got %d", req.ID.Int64())
+		}
+	}
+}
+
+func TestAnyInt64_prefixAndSetPrefix(t *testing.T) {
+	suffix := "01hf7yat00c1s"
+	id, err := typeid.ParseAnyInt64("foo_" + suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := id.Prefix(); got != "foo" {
+		t.Fatalf("Prefix() = %q, want foo", got)
+	}
+
+	id.SetPrefix("bar")
+	if got := id.Prefix(); got != "bar" {
+		t.Fatalf("after SetPrefix, Prefix() = %q, want bar", got)
+	}
+	wantText := "bar_" + suffix
+	if got, _ := id.MarshalText(); string(got) != wantText {
+		t.Fatalf("MarshalText = %q, want %q", got, wantText)
+	}
+}
+
+func TestAnyInt64_narrowToOrgPrefix(t *testing.T) {
+	suffix := "01hf7yat00c1s"
+	anyID, err := typeid.ParseAnyInt64("org_" + suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var orgID OrgID
+	switch anyID.Prefix() {
+	case "org":
+		orgID, err = typeid.Int64From[orgPrefix](anyID.Int64())
+	default:
+		t.Fatalf("unexpected prefix %q", anyID.Prefix())
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if orgID.Int64() != anyID.Int64() {
+		t.Errorf("Int64 mismatch")
+	}
+	if got := orgID.String(); got != "org_"+suffix {
+		t.Errorf("String() = %q", got)
+	}
+}
+
 func TestInt64_Sortable(t *testing.T) {
 	a, err := typeid.NewInt64[orgPrefix]()
 	if err != nil {

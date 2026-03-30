@@ -258,9 +258,9 @@ func BenchmarkUUID_Parse(b *testing.B) {
 	}
 }
 
-func TestUUID_AnyPrefix_json(t *testing.T) {
+func TestAnyUUID_json(t *testing.T) {
 	type Request struct {
-		ID typeid.UUID[typeid.AnyPrefix] `json:"id"`
+		ID typeid.AnyUUID `json:"id"`
 	}
 
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
@@ -280,9 +280,64 @@ func TestUUID_AnyPrefix_json(t *testing.T) {
 	}
 }
 
-func TestUUID_AnyPrefix_prefixAndSetPrefix(t *testing.T) {
+// ExampleAnyUUID_switchToTypedUUID shows narrowing [AnyUUID] to [UUID] after inspecting [AnyUUID.Prefix].
+// Use [UUIDFrom] when the prefix matches; it keeps the same UUID bytes under the typed wrapper.
+func ExampleAnyUUID_switchToTypedUUID() {
+	const payload = `{"id":"user_01jcp1ss00edg828t5cy4tqkff"}`
+	type Request struct {
+		ID typeid.AnyUUID `json:"id"`
+	}
+	var req Request
+	if err := json.Unmarshal([]byte(payload), &req); err != nil {
+		fmt.Println("unmarshal:", err)
+		return
+	}
+
+	var userID UserID
+	var err error
+	switch req.ID.Prefix() {
+	case "user":
+		userID, err = typeid.UUIDFrom[userPrefix](req.ID.UUID())
+	default:
+		fmt.Println("unknown prefix")
+		return
+	}
+	if err != nil {
+		fmt.Println("narrow:", err)
+		return
+	}
+	fmt.Println(userID.String())
+	// Output:
+	// user_01jcp1ss00edg828t5cy4tqkff
+}
+
+func TestAnyUUID_narrowToUserPrefix(t *testing.T) {
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
-	id, err := typeid.ParseUUID[typeid.AnyPrefix]("foo_" + suffix)
+	anyID, err := typeid.ParseAnyUUID("user_" + suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var userID UserID
+	switch anyID.Prefix() {
+	case "user":
+		userID, err = typeid.UUIDFrom[userPrefix](anyID.UUID())
+	default:
+		t.Fatalf("unexpected prefix %q", anyID.Prefix())
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if userID.UUID() != anyID.UUID() {
+		t.Errorf("UUID mismatch")
+	}
+	if got := userID.String(); got != "user_"+suffix {
+		t.Errorf("String() = %q", got)
+	}
+}
+
+func TestAnyUUID_prefixAndSetPrefix(t *testing.T) {
+	suffix := "01jcp1ss00edg828t5cy4tqkff"
+	id, err := typeid.ParseAnyUUID("foo_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,18 +352,6 @@ func TestUUID_AnyPrefix_prefixAndSetPrefix(t *testing.T) {
 	wantText := "bar_" + suffix
 	if got, _ := id.MarshalText(); string(got) != wantText {
 		t.Fatalf("MarshalText = %q, want %q", got, wantText)
-	}
-}
-
-func TestUUID_AnyPrefix_SetPrefixNoOpOnFixed(t *testing.T) {
-	id, err := typeid.NewUUID[userPrefix]()
-	if err != nil {
-		t.Fatal(err)
-	}
-	before := id.String()
-	id.SetPrefix("nope")
-	if id.String() != before {
-		t.Fatalf("SetPrefix changed fixed-prefix ID: %s -> %s", before, id.String())
 	}
 }
 

@@ -3,19 +3,13 @@ package typeid
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Prefixer is the constraint for type-safe ID prefixes.
 type Prefixer interface {
 	Prefix() string
 }
-
-// AnyPrefix enables [UUID[AnyPrefix]] to parse any prefix (including none) while
-// preserving the prefix for [UUID.Prefix], [UUID.SetPrefix], and text marshaling.
-// The [AnyPrefix.Prefix] method always returns "" and is not used for validation.
-type AnyPrefix struct{}
-
-func (AnyPrefix) Prefix() string { return "" }
 
 var (
 	ErrOnlyV7         = errors.New("typeid: only UUIDv7 is supported")
@@ -32,44 +26,16 @@ const (
 
 // splitTypeid splits "prefix_<suffix>" from the right using known suffix length.
 // Supports underscores in the prefix (e.g. "project_env_<suffix>").
-func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error) {
+func splitTypeid[P Prefixer](s string, suffixLen int) (string, error) {
 	var p P
 	want := p.Prefix()
-
-	sep := len(s) - suffixLen - 1
-	if sep < 0 || s[sep] != '_' {
+	j := strings.LastIndex(s, "_") + 1 // 0 = bare suffix; else first byte after last '_'
+	prefix, suffix := s[:max(0, j-1)], s[j:]
+	if len(suffix) != suffixLen {
 		return "", fmt.Errorf("typeid: invalid format: %q", s)
 	}
-	if s[:sep] != want {
-		return "", fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", want, s[:sep])
+	if prefix != want {
+		return "", fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", want, prefix)
 	}
-	return s[sep+1:], nil
-}
-
-// splitTypeidAny splits s into prefix and suffix. If s is exactly suffixLen
-// characters, the prefix is empty and the whole string is the suffix.
-func splitTypeidAny(s string, suffixLen int) (prefix string, suffix string, err error) {
-	if len(s) == suffixLen {
-		return "", s, nil
-	}
-	sep := len(s) - suffixLen - 1
-	if sep < 0 || s[sep] != '_' {
-		return "", "", fmt.Errorf("typeid: invalid format: %q", s)
-	}
-	return s[:sep], s[sep+1:], nil
-}
-
-func growSlice(dst []byte, n int) []byte {
-	if cap(dst)-len(dst) >= n {
-		return dst
-	}
-	buf := make([]byte, len(dst), len(dst)+n)
-	copy(buf, dst)
-	return buf
-}
-
-func appendID[P Prefixer](dst []byte) []byte {
-	var p P
-	dst = append(dst, p.Prefix()...)
-	return append(dst, '_')
+	return suffix, nil
 }

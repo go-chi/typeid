@@ -3,6 +3,7 @@ package typeid
 import (
 	"encoding/binary"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -32,8 +33,12 @@ func decodeChar(c byte) (byte, error) {
 	return v, nil
 }
 
-// UUID encoding (128 bits -> 26 chars, appended to dst)
-func appendBase32UUID(dst []byte, u uuid.UUID) []byte {
+// appendBase32UUID appends an optional prefix and underscore, then the 26-char typeid suffix for u.
+func appendBase32UUID(dst []byte, prefix string, u uuid.UUID) []byte {
+	dst = slices.Grow(dst, uuidSuffixLen+len(prefix)+min(1, len(prefix)))
+	if len(prefix) > 0 {
+		dst = append(append(dst, prefix...), '_')
+	}
 	hi := binary.BigEndian.Uint64(u[:8])
 	lo := binary.BigEndian.Uint64(u[8:])
 
@@ -101,8 +106,12 @@ func decodeBase32UUID(s string) ([16]byte, error) {
 	return out, nil
 }
 
-// Int64 encoding (63 bits -> 13 chars, appended to dst)
-func appendBase32Int64(dst []byte, n int64) []byte {
+// appendBase32Int64 appends an optional prefix and underscore, then the 13-char typeid suffix for n.
+func appendBase32Int64(dst []byte, prefix string, n int64) []byte {
+	dst = slices.Grow(dst, int64SuffixLen+len(prefix)+min(1, len(prefix)))
+	if len(prefix) > 0 {
+		dst = append(append(dst, prefix...), '_')
+	}
 	u := uint64(n)
 	var buf [int64SuffixLen]byte
 
