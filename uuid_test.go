@@ -258,6 +258,60 @@ func BenchmarkUUID_Parse(b *testing.B) {
 	}
 }
 
+func TestUUID_AnyPrefix_json(t *testing.T) {
+	type Request struct {
+		ID typeid.UUID[typeid.AnyPrefix] `json:"id"`
+	}
+
+	suffix := "01jcp1ss00edg828t5cy4tqkff"
+	inputs := []string{
+		`{"id":"whatever_prefix_` + suffix + `"}`,
+		`{"id":"other_prefix_` + suffix + `"}`,
+		`{"id":"` + suffix + `"}`,
+	}
+	for _, raw := range inputs {
+		var req Request
+		if err := json.Unmarshal([]byte(raw), &req); err != nil {
+			t.Fatalf("Unmarshal %s: %v", raw, err)
+		}
+		if req.ID.UUID().String() == "" || req.ID.UUID().Version() != 7 {
+			t.Fatalf("expected v7 UUID, got %v", req.ID.UUID())
+		}
+	}
+}
+
+func TestUUID_AnyPrefix_prefixAndSetPrefix(t *testing.T) {
+	suffix := "01jcp1ss00edg828t5cy4tqkff"
+	id, err := typeid.ParseUUID[typeid.AnyPrefix]("foo_" + suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := id.Prefix(); got != "foo" {
+		t.Fatalf("Prefix() = %q, want foo", got)
+	}
+
+	id.SetPrefix("bar")
+	if got := id.Prefix(); got != "bar" {
+		t.Fatalf("after SetPrefix, Prefix() = %q, want bar", got)
+	}
+	wantText := "bar_" + suffix
+	if got, _ := id.MarshalText(); string(got) != wantText {
+		t.Fatalf("MarshalText = %q, want %q", got, wantText)
+	}
+}
+
+func TestUUID_AnyPrefix_SetPrefixNoOpOnFixed(t *testing.T) {
+	id, err := typeid.NewUUID[userPrefix]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := id.String()
+	id.SetPrefix("nope")
+	if id.String() != before {
+		t.Fatalf("SetPrefix changed fixed-prefix ID: %s -> %s", before, id.String())
+	}
+}
+
 func TestUUID_Sortable(t *testing.T) {
 	a, err := typeid.NewUUID[userPrefix]()
 	if err != nil {

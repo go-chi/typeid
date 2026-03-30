@@ -10,7 +10,8 @@ import (
 // UUID is a type-safe UUIDv7 identifier with a compile-time prefix.
 // Maps to Postgres uuid.
 type UUID[P Prefixer] struct {
-	val uuid.UUID
+	val    uuid.UUID
+	prefix string // only used when P is [AnyPrefix]; holds runtime prefix for parse/marshal
 }
 
 func NewUUID[P Prefixer]() (UUID[P], error) {
@@ -29,9 +30,22 @@ func UUIDFrom[P Prefixer](u uuid.UUID) (UUID[P], error) {
 }
 
 func ParseUUID[P Prefixer](s string) (UUID[P], error) {
-	suffix, err := splitTypeid[P](s, uuidSuffixLen)
-	if err != nil {
-		return UUID[P]{}, err
+	var p P
+	var suffix string
+	var dynPref string
+	switch any(p).(type) {
+	case AnyPrefix:
+		var err error
+		dynPref, suffix, err = splitTypeidAny(s, uuidSuffixLen)
+		if err != nil {
+			return UUID[P]{}, err
+		}
+	default:
+		var err error
+		suffix, err = splitTypeid[P](s, uuidSuffixLen)
+		if err != nil {
+			return UUID[P]{}, err
+		}
 	}
 	b, err := decodeBase32UUID(suffix)
 	if err != nil {
@@ -41,13 +55,45 @@ func ParseUUID[P Prefixer](s string) (UUID[P], error) {
 	if u.Version() != 7 {
 		return UUID[P]{}, ErrOnlyV7
 	}
-	return UUID[P]{val: u}, nil
+	switch any(p).(type) {
+	case AnyPrefix:
+		return UUID[P]{val: u, prefix: dynPref}, nil
+	default:
+		return UUID[P]{val: u}, nil
+	}
+}
+
+// Prefix returns the type's fixed prefix, or the runtime prefix for [UUID[AnyPrefix]].
+func (id UUID[P]) Prefix() string {
+	var p P
+	switch any(p).(type) {
+	case AnyPrefix:
+		return id.prefix
+	default:
+		return p.Prefix()
+	}
+}
+
+// SetPrefix updates the stored prefix for [UUID[AnyPrefix]] only; it is a no-op for other P.
+func (id *UUID[P]) SetPrefix(s string) {
+	var p P
+	if _, ok := any(p).(AnyPrefix); ok {
+		id.prefix = s
+	}
 }
 
 func (id UUID[P]) appendText(dst []byte) []byte {
-	var p P
-	dst = growSlice(dst, len(p.Prefix())+1+uuidSuffixLen)
-	return appendBase32UUID(appendID[P](dst), id.val)
+	pref := id.Prefix()
+	n := uuidSuffixLen
+	if pref != "" {
+		n += len(pref) + 1
+	}
+	dst = growSlice(dst, n)
+	if pref != "" {
+		dst = append(dst, pref...)
+		dst = append(dst, '_')
+	}
+	return appendBase32UUID(dst, id.val)
 }
 func (id UUID[P]) String() string { return string(id.appendText(nil)) }
 func (id UUID[P]) UUID() uuid.UUID              { return id.val }
@@ -100,5 +146,9 @@ func (id *UUID[P]) Scan(src any) (err error) {
 		return ErrOnlyV7
 	}
 	id.val = u
+	var p P
+	if _, ok := any(p).(AnyPrefix); ok {
+		id.prefix = ""
+	}
 	return nil
 }

@@ -10,6 +10,13 @@ type Prefixer interface {
 	Prefix() string
 }
 
+// AnyPrefix enables [UUID[AnyPrefix]] to parse any prefix (including none) while
+// preserving the prefix for [UUID.Prefix], [UUID.SetPrefix], and text marshaling.
+// The [AnyPrefix.Prefix] method always returns "" and is not used for validation.
+type AnyPrefix struct{}
+
+func (AnyPrefix) Prefix() string { return "" }
+
 var (
 	ErrOnlyV7         = errors.New("typeid: only UUIDv7 is supported")
 	ErrZeroUUID       = errors.New("typeid: zero UUID")
@@ -37,6 +44,19 @@ func splitTypeid[P Prefixer](s string, suffixLen int) (suffix string, err error)
 		return "", fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", want, s[:sep])
 	}
 	return s[sep+1:], nil
+}
+
+// splitTypeidAny splits s into prefix and suffix. If s is exactly suffixLen
+// characters, the prefix is empty and the whole string is the suffix.
+func splitTypeidAny(s string, suffixLen int) (prefix string, suffix string, err error) {
+	if len(s) == suffixLen {
+		return "", s, nil
+	}
+	sep := len(s) - suffixLen - 1
+	if sep < 0 || s[sep] != '_' {
+		return "", "", fmt.Errorf("typeid: invalid format: %q", s)
+	}
+	return s[:sep], s[sep+1:], nil
 }
 
 func growSlice(dst []byte, n int) []byte {
