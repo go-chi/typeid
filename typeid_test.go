@@ -30,24 +30,24 @@ type (
 var (
 	_ fmt.Stringer             = UserID{}
 	_ fmt.Stringer             = OrgID{}
-	_ fmt.Stringer             = typeid.AnyUUID{}
-	_ fmt.Stringer             = typeid.AnyInt64{}
+	_ fmt.Stringer             = typeid.AnyPrefixUUID{}
+	_ fmt.Stringer             = typeid.AnyPrefixInt64{}
 	_ encoding.TextMarshaler   = UserID{}
 	_ encoding.TextMarshaler   = OrgID{}
-	_ encoding.TextMarshaler   = typeid.AnyUUID{}
-	_ encoding.TextMarshaler   = typeid.AnyInt64{}
+	_ encoding.TextMarshaler   = typeid.AnyPrefixUUID{}
+	_ encoding.TextMarshaler   = typeid.AnyPrefixInt64{}
 	_ encoding.TextUnmarshaler = (*UserID)(nil)
 	_ encoding.TextUnmarshaler = (*OrgID)(nil)
-	_ encoding.TextUnmarshaler = (*typeid.AnyUUID)(nil)
-	_ encoding.TextUnmarshaler = (*typeid.AnyInt64)(nil)
+	_ encoding.TextUnmarshaler = (*typeid.AnyPrefixUUID)(nil)
+	_ encoding.TextUnmarshaler = (*typeid.AnyPrefixInt64)(nil)
 	_ driver.Valuer            = UserID{}
 	_ driver.Valuer            = OrgID{}
-	_ driver.Valuer            = typeid.AnyUUID{}
-	_ driver.Valuer            = typeid.AnyInt64{}
+	_ driver.Valuer            = typeid.AnyPrefixUUID{}
+	_ driver.Valuer            = typeid.AnyPrefixInt64{}
 	_ sql.Scanner              = (*UserID)(nil)
 	_ sql.Scanner              = (*OrgID)(nil)
-	_ sql.Scanner              = (*typeid.AnyUUID)(nil)
-	_ sql.Scanner              = (*typeid.AnyInt64)(nil)
+	_ sql.Scanner              = (*typeid.AnyPrefixUUID)(nil)
+	_ sql.Scanner              = (*typeid.AnyPrefixInt64)(nil)
 )
 
 func Example() {
