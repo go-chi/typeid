@@ -48,7 +48,10 @@ func (id UUID[P]) appendText(dst []byte) []byte {
 	var p P
 	return appendBase32UUID(dst, p.Prefix(), id.val)
 }
-func (id UUID[P]) String() string  { return string(id.appendText(nil)) }
+func (id UUID[P]) String() string {
+	var buf [64]byte
+	return string(id.appendText(buf[:0]))
+}
 func (id UUID[P]) UUID() uuid.UUID { return id.val }
 func (id UUID[P]) IsZero() bool    { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {

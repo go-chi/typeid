@@ -61,7 +61,10 @@ func (id AnyInt64) appendText(dst []byte) []byte {
 	return appendBase32Int64(dst, id.prefix, id.val)
 }
 
-func (id AnyInt64) String() string { return string(id.appendText(nil)) }
+func (id AnyInt64) String() string {
+	var buf [64]byte
+	return string(id.appendText(buf[:0]))
+}
 
 func (id AnyInt64) IsZero() bool { return id.val == 0 }
 

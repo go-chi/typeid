@@ -82,9 +82,12 @@ func (id Int64[P]) appendText(dst []byte) []byte {
 	return appendBase32Int64(dst, p.Prefix(), id.val)
 }
 
-func (id Int64[P]) String() string { return string(id.appendText(nil)) }
-func (id Int64[P]) Int64() int64   { return id.val }
-func (id Int64[P]) IsZero() bool   { return id.val == 0 }
+func (id Int64[P]) String() string {
+	var buf [64]byte
+	return string(id.appendText(buf[:0]))
+}
+func (id Int64[P]) Int64() int64 { return id.val }
+func (id Int64[P]) IsZero() bool { return id.val == 0 }
 func (id Int64[P]) MarshalText() ([]byte, error) {
 	if id.val <= 0 {
 		return nil, ErrNonPositiveInt

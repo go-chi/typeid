@@ -59,7 +59,10 @@ func (id AnyUUID) appendText(dst []byte) []byte {
 	return appendBase32UUID(dst, id.prefix, id.val)
 }
 
-func (id AnyUUID) String() string { return string(id.appendText(nil)) }
+func (id AnyUUID) String() string {
+	var buf [64]byte
+	return string(id.appendText(buf[:0]))
+}
 
 func (id AnyUUID) IsZero() bool { return id.val == uuid.UUID{} }
 
