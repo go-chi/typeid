@@ -2,8 +2,10 @@ package typeid
 
 import (
 	"database/sql/driver"
+	"encoding/binary"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -110,4 +112,10 @@ func (id *AnyUUID) Scan(src any) (err error) {
 	}
 	id.val = u
 	return nil
+}
+
+// GetTime extracts the millisecond-precision creation timestamp from the UUIDv7.
+func (id AnyUUID) GetTime() time.Time {
+	ms := int64(binary.BigEndian.Uint16(id.val[:2]))<<32 | int64(binary.BigEndian.Uint32(id.val[2:6]))
+	return time.UnixMilli(ms)
 }
