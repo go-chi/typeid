@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-// AnyInt64 is a compact typeid string that accepts any prefix (or none) when parsing
-// and keeps that prefix for [AnyInt64.Prefix], [AnyInt64.SetPrefix], and text marshaling.
+// AnyInt64 is a compact identifier with a runtime-configurable prefix.
+// Unlike [Int64], the prefix is not fixed at compile time.
 type AnyInt64 struct {
 	val    int64
 	prefix string
 }
 
-func NewAnyInt64() (AnyInt64, error) {
+func NewAnyInt64(prefix string) (AnyInt64, error) {
 	ms := time.Now().UnixMilli()
 
 	var rb [2]byte
@@ -25,14 +25,14 @@ func NewAnyInt64() (AnyInt64, error) {
 	}
 	r := int64(binary.BigEndian.Uint16(rb[:]) & 0x7FFF)
 
-	return AnyInt64{val: (ms << randomBits) | r}, nil
+	return AnyInt64{val: (ms << randomBits) | r, prefix: prefix}, nil
 }
 
-func AnyInt64From(v int64) (AnyInt64, error) {
+func AnyInt64From(prefix string, v int64) (AnyInt64, error) {
 	if v <= 0 {
 		return AnyInt64{}, ErrNonPositiveInt
 	}
-	return AnyInt64{val: v}, nil
+	return AnyInt64{val: v, prefix: prefix}, nil
 }
 
 func ParseAnyInt64(s string) (AnyInt64, error) {
@@ -102,6 +102,5 @@ func (id *AnyInt64) Scan(src any) error {
 		return ErrNonPositiveInt
 	}
 	id.val = v
-	id.prefix = ""
 	return nil
 }

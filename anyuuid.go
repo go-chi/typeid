@@ -8,26 +8,26 @@ import (
 	"github.com/google/uuid"
 )
 
-// AnyUUID is a UUIDv7 typeid string that accepts any prefix (or none) when parsing
-// and keeps that prefix for [AnyUUID.Prefix], [AnyUUID.SetPrefix], and text marshaling.
+// AnyUUID is a UUIDv7 identifier with a runtime-configurable prefix.
+// Unlike [UUID], the prefix is not fixed at compile time.
 type AnyUUID struct {
 	val    uuid.UUID
 	prefix string
 }
 
-func NewAnyUUID() (AnyUUID, error) {
+func NewAnyUUID(prefix string) (AnyUUID, error) {
 	u, err := uuid.NewV7()
 	if err != nil {
 		return AnyUUID{}, err
 	}
-	return AnyUUID{val: u}, nil
+	return AnyUUID{val: u, prefix: prefix}, nil
 }
 
-func AnyUUIDFrom(u uuid.UUID) (AnyUUID, error) {
+func AnyUUIDFrom(prefix string, u uuid.UUID) (AnyUUID, error) {
 	if u.Version() != 7 {
 		return AnyUUID{}, ErrOnlyV7
 	}
-	return AnyUUID{val: u}, nil
+	return AnyUUID{val: u, prefix: prefix}, nil
 }
 
 func ParseAnyUUID(s string) (AnyUUID, error) {
@@ -109,6 +109,5 @@ func (id *AnyUUID) Scan(src any) (err error) {
 		return ErrOnlyV7
 	}
 	id.val = u
-	id.prefix = ""
 	return nil
 }
