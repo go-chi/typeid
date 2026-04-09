@@ -48,9 +48,9 @@ func (id UUID[P]) appendText(dst []byte) []byte {
 	var p P
 	return appendBase32UUID(dst, p.Prefix(), id.val)
 }
-func (id UUID[P]) String() string { return string(id.appendText(nil)) }
-func (id UUID[P]) UUID() uuid.UUID              { return id.val }
-func (id UUID[P]) IsZero() bool                 { return id.val == uuid.UUID{} }
+func (id UUID[P]) String() string  { return string(id.appendText(nil)) }
+func (id UUID[P]) UUID() uuid.UUID { return id.val }
+func (id UUID[P]) IsZero() bool    { return id.val == uuid.UUID{} }
 func (id UUID[P]) MarshalText() ([]byte, error) {
 	if id.IsZero() {
 		return nil, ErrZeroUUID
@@ -72,6 +72,12 @@ func (id UUID[P]) Value() (driver.Value, error) {
 		return nil, ErrZeroUUID
 	}
 	return id.val.String(), nil
+}
+
+// Any converts a typed UUID to an AnyUUID with the same prefix and value.
+func (id UUID[P]) Any() AnyUUID {
+	var p P
+	return AnyUUID{val: id.val, prefix: p.Prefix()}
 }
 
 func (id *UUID[P]) Scan(src any) (err error) {
