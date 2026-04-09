@@ -258,9 +258,9 @@ func BenchmarkUUID_Parse(b *testing.B) {
 	}
 }
 
-func TestAnyPrefixUUID_json(t *testing.T) {
+func TestAnyUUID_json(t *testing.T) {
 	type Request struct {
-		ID typeid.AnyPrefixUUID `json:"id"`
+		ID typeid.AnyUUID `json:"id"`
 	}
 
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
@@ -280,12 +280,12 @@ func TestAnyPrefixUUID_json(t *testing.T) {
 	}
 }
 
-// ExampleAnyPrefixUUID_switchToTypedUUID shows narrowing [AnyPrefixUUID] to [UUID] after inspecting [AnyPrefixUUID.Prefix].
+// ExampleAnyUUID_switchToTypedUUID shows narrowing [AnyUUID] to [UUID] after inspecting [AnyUUID.Prefix].
 // Use [UUIDFrom] when the prefix matches; it keeps the same UUID bytes under the typed wrapper.
-func ExampleAnyPrefixUUID_switchToTypedUUID() {
+func ExampleAnyUUID_switchToTypedUUID() {
 	const payload = `{"id":"user_01jcp1ss00edg828t5cy4tqkff"}`
 	type Request struct {
-		ID typeid.AnyPrefixUUID `json:"id"`
+		ID typeid.AnyUUID `json:"id"`
 	}
 	var req Request
 	if err := json.Unmarshal([]byte(payload), &req); err != nil {
@@ -311,9 +311,9 @@ func ExampleAnyPrefixUUID_switchToTypedUUID() {
 	// user_01jcp1ss00edg828t5cy4tqkff
 }
 
-func TestAnyPrefixUUID_narrowToUserPrefix(t *testing.T) {
+func TestAnyUUID_narrowToUserPrefix(t *testing.T) {
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
-	anyID, err := typeid.ParseAnyPrefixUUID("user_" + suffix)
+	anyID, err := typeid.ParseAnyUUID("user_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,9 +335,9 @@ func TestAnyPrefixUUID_narrowToUserPrefix(t *testing.T) {
 	}
 }
 
-func TestAnyPrefixUUID_prefixAndSetPrefix(t *testing.T) {
+func TestAnyUUID_prefixAndSetPrefix(t *testing.T) {
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
-	id, err := typeid.ParseAnyPrefixUUID("foo_" + suffix)
+	id, err := typeid.ParseAnyUUID("foo_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}

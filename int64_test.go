@@ -238,11 +238,11 @@ func BenchmarkInt64_Parse(b *testing.B) {
 	}
 }
 
-// ExampleAnyPrefixInt64_switchToTypedInt64 narrows [AnyPrefixInt64] to [Int64] after a prefix switch.
-func ExampleAnyPrefixInt64_switchToTypedInt64() {
+// ExampleAnyInt64_switchToTypedInt64 narrows [AnyInt64] to [Int64] after a prefix switch.
+func ExampleAnyInt64_switchToTypedInt64() {
 	const payload = `{"id":"org_01hf7yat00c1s"}`
 	type Request struct {
-		ID typeid.AnyPrefixInt64 `json:"id"`
+		ID typeid.AnyInt64 `json:"id"`
 	}
 	var req Request
 	if err := json.Unmarshal([]byte(payload), &req); err != nil {
@@ -268,9 +268,9 @@ func ExampleAnyPrefixInt64_switchToTypedInt64() {
 	// org_01hf7yat00c1s
 }
 
-func TestAnyPrefixInt64_json(t *testing.T) {
+func TestAnyInt64_json(t *testing.T) {
 	type Request struct {
-		ID typeid.AnyPrefixInt64 `json:"id"`
+		ID typeid.AnyInt64 `json:"id"`
 	}
 
 	suffix := "01hf7yat00c1s"
@@ -290,9 +290,9 @@ func TestAnyPrefixInt64_json(t *testing.T) {
 	}
 }
 
-func TestAnyPrefixInt64_prefixAndSetPrefix(t *testing.T) {
+func TestAnyInt64_prefixAndSetPrefix(t *testing.T) {
 	suffix := "01hf7yat00c1s"
-	id, err := typeid.ParseAnyPrefixInt64("foo_" + suffix)
+	id, err := typeid.ParseAnyInt64("foo_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,9 +310,9 @@ func TestAnyPrefixInt64_prefixAndSetPrefix(t *testing.T) {
 	}
 }
 
-func TestAnyPrefixInt64_narrowToOrgPrefix(t *testing.T) {
+func TestAnyInt64_narrowToOrgPrefix(t *testing.T) {
 	suffix := "01hf7yat00c1s"
-	anyID, err := typeid.ParseAnyPrefixInt64("org_" + suffix)
+	anyID, err := typeid.ParseAnyInt64("org_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
