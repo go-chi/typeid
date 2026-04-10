@@ -643,3 +643,115 @@ func TestUUID_Sortable(t *testing.T) {
 		t.Errorf("expected a < b (IDs must sort by time)\n  a = %s\n  b = %s", a, b)
 	}
 }
+
+// -- Variable prefix (apiKeyMode) tests --
+
+type ApiKeyID = typeid.AnyUUID[apiKeyMode]
+
+func TestAnyUUID_VariablePrefix_Parse(t *testing.T) {
+	suffix := "01jcp1ss00edg828t5cy4tqkff"
+
+	tests := []struct {
+		input      string
+		wantPrefix string
+		wantMode   apiKeyMode
+	}{
+		{"api_key_" + suffix, "api_key", apiKeyLive},
+		{"api_key_sandbox_" + suffix, "api_key_sandbox", apiKeySandbox},
+	}
+	for _, tt := range tests {
+		t.Run(tt.wantPrefix, func(t *testing.T) {
+			id, err := typeid.ParseAnyUUID[apiKeyMode](tt.input)
+			if err != nil {
+				t.Fatalf("ParseAnyUUID: %v", err)
+			}
+			if id.Prefix() != tt.wantPrefix {
+				t.Errorf("Prefix() = %q, want %q", id.Prefix(), tt.wantPrefix)
+			}
+			if id.PrefixValue() != tt.wantMode {
+				t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), tt.wantMode)
+			}
+		})
+	}
+}
+
+func TestAnyUUID_VariablePrefix_RejectsUnknown(t *testing.T) {
+	suffix := "01jcp1ss00edg828t5cy4tqkff"
+	_, err := typeid.ParseAnyUUID[apiKeyMode]("bogus_" + suffix)
+	if err == nil {
+		t.Fatal("expected error for unknown prefix")
+	}
+}
+
+func TestAnyUUID_VariablePrefix_Roundtrip(t *testing.T) {
+	id, err := typeid.NewAnyUUID(apiKeySandbox)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := id.String()
+	parsed, err := typeid.ParseAnyUUID[apiKeyMode](s)
+	if err != nil {
+		t.Fatalf("ParseAnyUUID roundtrip: %v", err)
+	}
+	if parsed.UUID() != id.UUID() {
+		t.Error("UUID mismatch")
+	}
+	if parsed.PrefixValue() != apiKeySandbox {
+		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeySandbox)
+	}
+	if parsed.String() != s {
+		t.Errorf("String() = %q, want %q", parsed.String(), s)
+	}
+}
+
+func TestAnyUUID_VariablePrefix_SetPrefix(t *testing.T) {
+	id, _ := typeid.NewAnyUUID(apiKeyLive)
+	if id.PrefixValue() != apiKeyLive {
+		t.Fatalf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeyLive)
+	}
+
+	id.SetPrefix(apiKeySandbox)
+	if id.PrefixValue() != apiKeySandbox {
+		t.Errorf("after SetPrefix, PrefixValue() = %d, want %d", id.PrefixValue(), apiKeySandbox)
+	}
+	if id.Prefix() != "api_key_sandbox" {
+		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key_sandbox")
+	}
+}
+
+func TestAnyUUID_VariablePrefix_JSON(t *testing.T) {
+	type Record struct {
+		ID ApiKeyID `json:"id"`
+	}
+
+	id, _ := typeid.NewAnyUUID(apiKeySandbox)
+	original := Record{ID: id}
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"id":"api_key_sandbox_`) {
+		t.Errorf("JSON should contain api_key_sandbox_ prefix: %s", data)
+	}
+
+	var decoded Record
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.ID.PrefixValue() != apiKeySandbox {
+		t.Errorf("PrefixValue() = %d, want %d", decoded.ID.PrefixValue(), apiKeySandbox)
+	}
+	if decoded.ID.UUID() != original.ID.UUID() {
+		t.Error("UUID mismatch after JSON round-trip")
+	}
+}
+
+func TestAnyUUID_VariablePrefix_DefaultVariant(t *testing.T) {
+	id, _ := typeid.NewAnyUUID(apiKeyLive)
+	if id.Prefix() != "api_key" {
+		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key")
+	}
+	if id.PrefixValue() != apiKeyLive {
+		t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeyLive)
+	}
+}

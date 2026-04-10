@@ -352,3 +352,61 @@ func TestInt64_Sortable(t *testing.T) {
 		t.Errorf("expected a < b lexicographically\n  a = %s\n  b = %s", a, b)
 	}
 }
+
+// -- Variable prefix (apiKeyMode) tests for Int64 --
+
+type ApiKeyInt64ID = typeid.AnyInt64[apiKeyMode]
+
+func TestAnyInt64_VariablePrefix_Parse(t *testing.T) {
+	id, _ := typeid.NewAnyInt64(apiKeyLive)
+	s := id.String()
+	parsed, err := typeid.ParseAnyInt64[apiKeyMode](s)
+	if err != nil {
+		t.Fatalf("ParseAnyInt64: %v", err)
+	}
+	if parsed.PrefixValue() != apiKeyLive {
+		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeyLive)
+	}
+	if parsed.Prefix() != "api_key" {
+		t.Errorf("Prefix() = %q, want %q", parsed.Prefix(), "api_key")
+	}
+}
+
+func TestAnyInt64_VariablePrefix_RejectsUnknown(t *testing.T) {
+	id, _ := typeid.NewAnyInt64(apiKeyLive)
+	// Swap prefix to something unknown
+	s := strings.Replace(id.String(), "api_key_", "bogus_", 1)
+	_, err := typeid.ParseAnyInt64[apiKeyMode](s)
+	if err == nil {
+		t.Fatal("expected error for unknown prefix")
+	}
+}
+
+func TestAnyInt64_VariablePrefix_Roundtrip(t *testing.T) {
+	id, _ := typeid.NewAnyInt64(apiKeySandbox)
+	s := id.String()
+	parsed, err := typeid.ParseAnyInt64[apiKeyMode](s)
+	if err != nil {
+		t.Fatalf("roundtrip: %v", err)
+	}
+	if parsed.Int64() != id.Int64() {
+		t.Error("Int64 mismatch")
+	}
+	if parsed.PrefixValue() != apiKeySandbox {
+		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeySandbox)
+	}
+	if parsed.String() != s {
+		t.Errorf("String() = %q, want %q", parsed.String(), s)
+	}
+}
+
+func TestAnyInt64_VariablePrefix_SetPrefix(t *testing.T) {
+	id, _ := typeid.NewAnyInt64(apiKeyLive)
+	id.SetPrefix(apiKeySandbox)
+	if id.PrefixValue() != apiKeySandbox {
+		t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeySandbox)
+	}
+	if id.Prefix() != "api_key_sandbox" {
+		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key_sandbox")
+	}
+}
