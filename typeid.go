@@ -11,6 +11,23 @@ type Prefixer interface {
 	Prefix() string
 }
 
+// VariablePrefixer is optionally implemented by prefix types that accept
+// multiple string representations (e.g. "api_key" and "api_key_sandbox").
+// ParsePrefix sets the receiver to the variant matching s and reports success.
+type VariablePrefixer interface {
+	ParsePrefix(s string) bool
+}
+
+// AnyPrefix accepts any prefix string. Use it as the type parameter for
+// [AnyUUID] or [AnyInt64] when the set of valid prefixes is not known at
+// compile time:
+//
+//	type FlexID = typeid.AnyUUID[typeid.AnyPrefix]
+type AnyPrefix string
+
+func (p AnyPrefix) Prefix() string             { return string(p) }
+func (p *AnyPrefix) ParsePrefix(s string) bool { *p = AnyPrefix(s); return true }
+
 var (
 	ErrOnlyV7         = errors.New("typeid: only UUIDv7 is supported")
 	ErrZeroUUID       = errors.New("typeid: zero UUID")

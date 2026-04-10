@@ -26,6 +26,36 @@ type (
 	OrgID  = typeid.Int64[orgPrefix]
 )
 
+// Variable prefix test types.
+
+type apiKeyMode uint8
+
+const (
+	apiKeyLive apiKeyMode = iota
+	apiKeySandbox
+)
+
+func (p apiKeyMode) Prefix() string {
+	switch p {
+	case apiKeySandbox:
+		return "api_key_sandbox"
+	default:
+		return "api_key"
+	}
+}
+
+func (p *apiKeyMode) ParsePrefix(s string) bool {
+	switch s {
+	case "api_key":
+		*p = apiKeyLive
+		return true
+	case "api_key_sandbox":
+		*p = apiKeySandbox
+		return true
+	}
+	return false
+}
+
 // Compile-time interface checks.
 var (
 	_ fmt.Stringer             = UserID{}
@@ -48,6 +78,10 @@ var (
 	_ sql.Scanner              = (*OrgID)(nil)
 	_ sql.Scanner              = (*typeid.AnyUUID)(nil)
 	_ sql.Scanner              = (*typeid.AnyInt64)(nil)
+	_ typeid.Prefixer          = typeid.AnyPrefix("")
+	_ typeid.VariablePrefixer  = (*typeid.AnyPrefix)(nil)
+	_ typeid.Prefixer          = apiKeyMode(0)
+	_ typeid.VariablePrefixer  = (*apiKeyMode)(nil)
 )
 
 func Example() {
