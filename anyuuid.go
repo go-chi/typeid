@@ -12,69 +12,79 @@ import (
 
 // AnyUUID is a UUIDv7 identifier with a runtime-configurable prefix.
 // Unlike [UUID], the prefix is not fixed at compile time.
-type AnyUUID struct {
+//
+// Use [AnyPrefix] as P for unconstrained prefixes, or a custom enum type
+// implementing [VariablePrefixer] for a known set of variants.
+type AnyUUID[P Prefixer] struct {
+	prefix P
 	val    uuid.UUID
-	prefix string
 }
 
-func NewAnyUUID(prefix string) (AnyUUID, error) {
+func NewAnyUUID[P Prefixer](p P) (AnyUUID[P], error) {
 	u, err := uuid.NewV7()
 	if err != nil {
-		return AnyUUID{}, err
+		return AnyUUID[P]{}, err
 	}
-	return AnyUUID{val: u, prefix: prefix}, nil
+	return AnyUUID[P]{val: u, prefix: p}, nil
 }
 
-func AnyUUIDFrom(prefix string, u uuid.UUID) (AnyUUID, error) {
+func AnyUUIDFrom[P Prefixer](p P, u uuid.UUID) (AnyUUID[P], error) {
 	if u.Version() != 7 {
-		return AnyUUID{}, ErrOnlyV7
+		return AnyUUID[P]{}, ErrOnlyV7
 	}
-	return AnyUUID{val: u, prefix: prefix}, nil
+	return AnyUUID[P]{val: u, prefix: p}, nil
 }
 
-func ParseAnyUUID(s string) (AnyUUID, error) {
+func ParseAnyUUID[P Prefixer](s string) (AnyUUID[P], error) {
+	var p P
 	j := strings.LastIndex(s, "_") + 1
 	pref, suffix := s[:max(0, j-1)], s[j:]
 	if len(suffix) != uuidSuffixLen {
-		return AnyUUID{}, fmt.Errorf("typeid: invalid format: %q", s)
+		return AnyUUID[P]{}, fmt.Errorf("typeid: invalid format: %q", s)
+	}
+	if vp, ok := any(&p).(VariablePrefixer); ok {
+		if !vp.ParsePrefix(pref) {
+			return AnyUUID[P]{}, fmt.Errorf("typeid: unknown prefix: %q", pref)
+		}
+	} else if p.Prefix() != pref {
+		return AnyUUID[P]{}, fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", p.Prefix(), pref)
 	}
 	b, err := decodeBase32UUID(suffix)
 	if err != nil {
-		return AnyUUID{}, err
+		return AnyUUID[P]{}, err
 	}
 	u := uuid.UUID(b)
 	if u.Version() != 7 {
-		return AnyUUID{}, ErrOnlyV7
+		return AnyUUID[P]{}, ErrOnlyV7
 	}
-	return AnyUUID{val: u, prefix: pref}, nil
+	return AnyUUID[P]{val: u, prefix: p}, nil
 }
 
-func (id AnyUUID) UUID() uuid.UUID { return id.val }
-func (id AnyUUID) Prefix() string  { return id.prefix }
-func (id *AnyUUID) SetPrefix(s string) {
-	id.prefix = s
+func (id AnyUUID[P]) UUID() uuid.UUID { return id.val }
+func (id AnyUUID[P]) Prefix() string  { return id.prefix.Prefix() }
+func (id AnyUUID[P]) PrefixValue() P  { return id.prefix }
+func (id *AnyUUID[P]) SetPrefix(p P)  { id.prefix = p }
+
+func (id AnyUUID[P]) appendText(dst []byte) []byte {
+	return appendBase32UUID(dst, id.prefix.Prefix(), id.val)
 }
 
-func (id AnyUUID) appendText(dst []byte) []byte {
-	return appendBase32UUID(dst, id.prefix, id.val)
-}
-
-func (id AnyUUID) String() string {
+func (id AnyUUID[P]) String() string {
 	var buf [64]byte
 	return string(id.appendText(buf[:0]))
 }
 
-func (id AnyUUID) IsZero() bool { return id.val == uuid.UUID{} }
+func (id AnyUUID[P]) IsZero() bool { return id.val == uuid.UUID{} }
 
-func (id AnyUUID) MarshalText() ([]byte, error) {
+func (id AnyUUID[P]) MarshalText() ([]byte, error) {
 	if id.IsZero() {
 		return nil, ErrZeroUUID
 	}
 	return id.appendText(nil), nil
 }
 
-func (id *AnyUUID) UnmarshalText(data []byte) error {
-	parsed, err := ParseAnyUUID(string(data))
+func (id *AnyUUID[P]) UnmarshalText(data []byte) error {
+	parsed, err := ParseAnyUUID[P](string(data))
 	if err != nil {
 		return err
 	}
@@ -82,14 +92,14 @@ func (id *AnyUUID) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func (id AnyUUID) Value() (driver.Value, error) {
+func (id AnyUUID[P]) Value() (driver.Value, error) {
 	if id.IsZero() {
 		return nil, ErrZeroUUID
 	}
 	return id.val.String(), nil
 }
 
-func (id *AnyUUID) Scan(src any) (err error) {
+func (id *AnyUUID[P]) Scan(src any) (err error) {
 	var u uuid.UUID
 	switch v := src.(type) {
 	case string:
@@ -118,7 +128,7 @@ func (id *AnyUUID) Scan(src any) (err error) {
 }
 
 // GetTime extracts the millisecond-precision creation timestamp from the UUIDv7.
-func (id AnyUUID) GetTime() time.Time {
+func (id AnyUUID[P]) GetTime() time.Time {
 	ms := int64(binary.BigEndian.Uint16(id.val[:2]))<<32 | int64(binary.BigEndian.Uint32(id.val[2:6]))
 	return time.UnixMilli(ms)
 }
