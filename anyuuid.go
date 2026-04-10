@@ -42,12 +42,11 @@ func ParseAnyUUID[P Prefixer](s string) (AnyUUID[P], error) {
 	if len(suffix) != uuidSuffixLen {
 		return AnyUUID[P]{}, fmt.Errorf("typeid: invalid format: %q", s)
 	}
-	vp, isVar := any(&p).(VariablePrefixer)
-	if isVar && !vp.ParsePrefix(pref) {
-		return AnyUUID[P]{}, fmt.Errorf("typeid: unknown prefix: %q", pref)
+	if vp, ok := any(&p).(VariablePrefixer); ok {
+		vp.ParsePrefix(pref)
 	}
-	if !isVar && p.Prefix() != pref {
-		return AnyUUID[P]{}, fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", p.Prefix(), pref)
+	if p.Prefix() != pref {
+		return AnyUUID[P]{}, fmt.Errorf("typeid: invalid prefix: %q", pref)
 	}
 	b, err := decodeBase32UUID(suffix)
 	if err != nil {
