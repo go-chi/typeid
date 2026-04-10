@@ -364,8 +364,8 @@ func TestAnyInt64_VariablePrefix_Parse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseAnyInt64: %v", err)
 	}
-	if parsed.PrefixValue() != apiKeyLive {
-		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeyLive)
+	if parsed.Variant() != apiKeyLive {
+		t.Errorf("Variant() = %d, want %d", parsed.Variant(), apiKeyLive)
 	}
 	if parsed.Prefix() != "api_key" {
 		t.Errorf("Prefix() = %q, want %q", parsed.Prefix(), "api_key")
@@ -392,8 +392,8 @@ func TestAnyInt64_VariablePrefix_Roundtrip(t *testing.T) {
 	if parsed.Int64() != id.Int64() {
 		t.Error("Int64 mismatch")
 	}
-	if parsed.PrefixValue() != apiKeySandbox {
-		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeySandbox)
+	if parsed.Variant() != apiKeySandbox {
+		t.Errorf("Variant() = %d, want %d", parsed.Variant(), apiKeySandbox)
 	}
 	if parsed.String() != s {
 		t.Errorf("String() = %q, want %q", parsed.String(), s)
@@ -403,8 +403,8 @@ func TestAnyInt64_VariablePrefix_Roundtrip(t *testing.T) {
 func TestAnyInt64_VariablePrefix_SetPrefix(t *testing.T) {
 	id, _ := typeid.NewAnyInt64(apiKeyLive)
 	id.SetPrefix(apiKeySandbox)
-	if id.PrefixValue() != apiKeySandbox {
-		t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeySandbox)
+	if id.Variant() != apiKeySandbox {
+		t.Errorf("Variant() = %d, want %d", id.Variant(), apiKeySandbox)
 	}
 	if id.Prefix() != "api_key_sandbox" {
 		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key_sandbox")

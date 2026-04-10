@@ -668,8 +668,8 @@ func TestAnyUUID_VariablePrefix_Parse(t *testing.T) {
 			if id.Prefix() != tt.wantPrefix {
 				t.Errorf("Prefix() = %q, want %q", id.Prefix(), tt.wantPrefix)
 			}
-			if id.PrefixValue() != tt.wantMode {
-				t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), tt.wantMode)
+			if id.Variant() != tt.wantMode {
+				t.Errorf("Variant() = %d, want %d", id.Variant(), tt.wantMode)
 			}
 		})
 	}
@@ -696,8 +696,8 @@ func TestAnyUUID_VariablePrefix_Roundtrip(t *testing.T) {
 	if parsed.UUID() != id.UUID() {
 		t.Error("UUID mismatch")
 	}
-	if parsed.PrefixValue() != apiKeySandbox {
-		t.Errorf("PrefixValue() = %d, want %d", parsed.PrefixValue(), apiKeySandbox)
+	if parsed.Variant() != apiKeySandbox {
+		t.Errorf("Variant() = %d, want %d", parsed.Variant(), apiKeySandbox)
 	}
 	if parsed.String() != s {
 		t.Errorf("String() = %q, want %q", parsed.String(), s)
@@ -706,13 +706,13 @@ func TestAnyUUID_VariablePrefix_Roundtrip(t *testing.T) {
 
 func TestAnyUUID_VariablePrefix_SetPrefix(t *testing.T) {
 	id, _ := typeid.NewAnyUUID(apiKeyLive)
-	if id.PrefixValue() != apiKeyLive {
-		t.Fatalf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeyLive)
+	if id.Variant() != apiKeyLive {
+		t.Fatalf("Variant() = %d, want %d", id.Variant(), apiKeyLive)
 	}
 
 	id.SetPrefix(apiKeySandbox)
-	if id.PrefixValue() != apiKeySandbox {
-		t.Errorf("after SetPrefix, PrefixValue() = %d, want %d", id.PrefixValue(), apiKeySandbox)
+	if id.Variant() != apiKeySandbox {
+		t.Errorf("after SetPrefix, Variant() = %d, want %d", id.Variant(), apiKeySandbox)
 	}
 	if id.Prefix() != "api_key_sandbox" {
 		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key_sandbox")
@@ -738,8 +738,8 @@ func TestAnyUUID_VariablePrefix_JSON(t *testing.T) {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
 	}
-	if decoded.ID.PrefixValue() != apiKeySandbox {
-		t.Errorf("PrefixValue() = %d, want %d", decoded.ID.PrefixValue(), apiKeySandbox)
+	if decoded.ID.Variant() != apiKeySandbox {
+		t.Errorf("Variant() = %d, want %d", decoded.ID.Variant(), apiKeySandbox)
 	}
 	if decoded.ID.UUID() != original.ID.UUID() {
 		t.Error("UUID mismatch after JSON round-trip")
@@ -751,7 +751,7 @@ func TestAnyUUID_VariablePrefix_DefaultVariant(t *testing.T) {
 	if id.Prefix() != "api_key" {
 		t.Errorf("Prefix() = %q, want %q", id.Prefix(), "api_key")
 	}
-	if id.PrefixValue() != apiKeyLive {
-		t.Errorf("PrefixValue() = %d, want %d", id.PrefixValue(), apiKeyLive)
+	if id.Variant() != apiKeyLive {
+		t.Errorf("Variant() = %d, want %d", id.Variant(), apiKeyLive)
 	}
 }

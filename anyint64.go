@@ -63,7 +63,7 @@ func ParseAnyInt64[P Prefixer](s string) (AnyInt64[P], error) {
 
 func (id AnyInt64[P]) Int64() int64   { return id.val }
 func (id AnyInt64[P]) Prefix() string { return id.prefix.Prefix() }
-func (id AnyInt64[P]) PrefixValue() P { return id.prefix }
+func (id AnyInt64[P]) Variant() P     { return id.prefix }
 func (id *AnyInt64[P]) SetPrefix(p P) { id.prefix = p }
 
 func (id AnyInt64[P]) appendText(dst []byte) []byte {

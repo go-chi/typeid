@@ -61,7 +61,7 @@ func ParseAnyUUID[P Prefixer](s string) (AnyUUID[P], error) {
 
 func (id AnyUUID[P]) UUID() uuid.UUID { return id.val }
 func (id AnyUUID[P]) Prefix() string  { return id.prefix.Prefix() }
-func (id AnyUUID[P]) PrefixValue() P  { return id.prefix }
+func (id AnyUUID[P]) Variant() P      { return id.prefix }
 func (id *AnyUUID[P]) SetPrefix(p P)  { id.prefix = p }
 
 func (id AnyUUID[P]) appendText(dst []byte) []byte {
