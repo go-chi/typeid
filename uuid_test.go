@@ -260,7 +260,7 @@ func BenchmarkUUID_Parse(b *testing.B) {
 
 func TestAnyUUID_json(t *testing.T) {
 	type Request struct {
-		ID typeid.AnyUUID `json:"id"`
+		ID typeid.AnyUUID[typeid.AnyPrefix] `json:"id"`
 	}
 
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
@@ -285,7 +285,7 @@ func TestAnyUUID_json(t *testing.T) {
 func ExampleAnyUUID_switchToTypedUUID() {
 	const payload = `{"id":"user_01jcp1ss00edg828t5cy4tqkff"}`
 	type Request struct {
-		ID typeid.AnyUUID `json:"id"`
+		ID typeid.AnyUUID[typeid.AnyPrefix] `json:"id"`
 	}
 	var req Request
 	if err := json.Unmarshal([]byte(payload), &req); err != nil {
@@ -313,7 +313,7 @@ func ExampleAnyUUID_switchToTypedUUID() {
 
 func TestAnyUUID_narrowToUserPrefix(t *testing.T) {
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
-	anyID, err := typeid.ParseAnyUUID("user_" + suffix)
+	anyID, err := typeid.ParseAnyUUID[typeid.AnyPrefix]("user_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +337,7 @@ func TestAnyUUID_narrowToUserPrefix(t *testing.T) {
 
 func TestAnyUUID_prefixAndSetPrefix(t *testing.T) {
 	suffix := "01jcp1ss00edg828t5cy4tqkff"
-	id, err := typeid.ParseAnyUUID("foo_" + suffix)
+	id, err := typeid.ParseAnyUUID[typeid.AnyPrefix]("foo_" + suffix)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestAnyUUID_prefixAndSetPrefix(t *testing.T) {
 		t.Fatalf("Prefix() = %q, want foo", got)
 	}
 
-	id.SetPrefix("bar")
+	id.SetPrefix(typeid.AnyPrefix("bar"))
 	if got := id.Prefix(); got != "bar" {
 		t.Fatalf("after SetPrefix, Prefix() = %q, want bar", got)
 	}
@@ -356,7 +356,7 @@ func TestAnyUUID_prefixAndSetPrefix(t *testing.T) {
 }
 
 func TestNewAnyUUID(t *testing.T) {
-	id, err := typeid.NewAnyUUID("user")
+	id, err := typeid.NewAnyUUID(typeid.AnyPrefix("user"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestNewAnyUUID(t *testing.T) {
 
 func TestAnyUUIDFrom(t *testing.T) {
 	raw := uuid.Must(uuid.NewV7())
-	id, err := typeid.AnyUUIDFrom("team", raw)
+	id, err := typeid.AnyUUIDFrom(typeid.AnyPrefix("team"), raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -387,14 +387,14 @@ func TestAnyUUIDFrom(t *testing.T) {
 
 func TestAnyUUIDFrom_RejectsV4(t *testing.T) {
 	v4 := uuid.New()
-	_, err := typeid.AnyUUIDFrom("user", v4)
+	_, err := typeid.AnyUUIDFrom(typeid.AnyPrefix("user"), v4)
 	if err == nil {
 		t.Error("expected error for non-v7 UUID")
 	}
 }
 
 func TestAnyUUID_String(t *testing.T) {
-	id, _ := typeid.NewAnyUUID("user")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("user"))
 	s := id.String()
 	if !strings.HasPrefix(s, "user_") {
 		t.Errorf("expected user_ prefix, got %q", s)
@@ -405,27 +405,27 @@ func TestAnyUUID_String(t *testing.T) {
 }
 
 func TestAnyUUID_SetPrefix(t *testing.T) {
-	id, _ := typeid.NewAnyUUID("apiKey")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKey"))
 	if !strings.HasPrefix(id.String(), "apiKey_") {
 		t.Fatalf("expected apiKey_ prefix, got %q", id.String())
 	}
 
-	id.SetPrefix("apiKeySandbox")
+	id.SetPrefix(typeid.AnyPrefix("apiKeySandbox"))
 	if !strings.HasPrefix(id.String(), "apiKeySandbox_") {
 		t.Errorf("expected apiKeySandbox_ prefix after SetPrefix, got %q", id.String())
 	}
 
 	// Underlying UUID unchanged
-	id2, _ := typeid.NewAnyUUID("apiKey")
+	id2, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKey"))
 	raw := id2.UUID()
-	id2.SetPrefix("other")
+	id2.SetPrefix(typeid.AnyPrefix("other"))
 	if id2.UUID() != raw {
 		t.Error("SetPrefix should not change the UUID")
 	}
 }
 
 func TestAnyUUID_MarshalText_RejectsZero(t *testing.T) {
-	var id typeid.AnyUUID
+	var id typeid.AnyUUID[typeid.AnyPrefix]
 	_, err := id.MarshalText()
 	if err == nil {
 		t.Error("MarshalText should reject zero")
@@ -433,10 +433,10 @@ func TestAnyUUID_MarshalText_RejectsZero(t *testing.T) {
 }
 
 func TestAnyUUID_UnmarshalText(t *testing.T) {
-	original, _ := typeid.NewAnyUUID("proj")
+	original, _ := typeid.NewAnyUUID(typeid.AnyPrefix("proj"))
 	data, _ := original.MarshalText()
 
-	var parsed typeid.AnyUUID
+	var parsed typeid.AnyUUID[typeid.AnyPrefix]
 	if err := parsed.UnmarshalText(data); err != nil {
 		t.Fatal(err)
 	}
@@ -449,10 +449,10 @@ func TestAnyUUID_UnmarshalText(t *testing.T) {
 }
 
 func TestAnyUUID_UnmarshalText_MultiWordPrefix(t *testing.T) {
-	original, _ := typeid.NewAnyUUID("apiKeySandbox")
+	original, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKeySandbox"))
 	data, _ := original.MarshalText()
 
-	var parsed typeid.AnyUUID
+	var parsed typeid.AnyUUID[typeid.AnyPrefix]
 	if err := parsed.UnmarshalText(data); err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +465,7 @@ func TestAnyUUID_UnmarshalText_MultiWordPrefix(t *testing.T) {
 }
 
 func TestAnyUUID_Value(t *testing.T) {
-	id, _ := typeid.NewAnyUUID("key")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("key"))
 	val, err := id.Value()
 	if err != nil {
 		t.Fatal(err)
@@ -480,7 +480,7 @@ func TestAnyUUID_Value(t *testing.T) {
 }
 
 func TestAnyUUID_Value_RejectsZero(t *testing.T) {
-	var id typeid.AnyUUID
+	var id typeid.AnyUUID[typeid.AnyPrefix]
 	_, err := id.Value()
 	if err == nil {
 		t.Error("Value should reject zero")
@@ -488,10 +488,10 @@ func TestAnyUUID_Value_RejectsZero(t *testing.T) {
 }
 
 func TestAnyUUID_Scan(t *testing.T) {
-	original, _ := typeid.NewAnyUUID("user")
+	original, _ := typeid.NewAnyUUID(typeid.AnyPrefix("user"))
 	raw := original.UUID().String()
 
-	var scanned typeid.AnyUUID
+	var scanned typeid.AnyUUID[typeid.AnyPrefix]
 	if err := scanned.Scan(raw); err != nil {
 		t.Fatal(err)
 	}
@@ -501,10 +501,10 @@ func TestAnyUUID_Scan(t *testing.T) {
 }
 
 func TestAnyUUID_ScanRawBytes(t *testing.T) {
-	original, _ := typeid.NewAnyUUID("user")
+	original, _ := typeid.NewAnyUUID(typeid.AnyPrefix("user"))
 	raw := original.UUID()
 
-	var scanned typeid.AnyUUID
+	var scanned typeid.AnyUUID[typeid.AnyPrefix]
 	if err := scanned.Scan(raw[:]); err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +514,7 @@ func TestAnyUUID_ScanRawBytes(t *testing.T) {
 }
 
 func TestAnyUUID_ScanInvalid(t *testing.T) {
-	var id typeid.AnyUUID
+	var id typeid.AnyUUID[typeid.AnyPrefix]
 	if err := id.Scan(123); err == nil {
 		t.Error("Scan should reject int")
 	}
@@ -525,19 +525,19 @@ func TestAnyUUID_ScanInvalid(t *testing.T) {
 }
 
 func TestAnyUUID_DBRoundTrip(t *testing.T) {
-	id, _ := typeid.NewAnyUUID("apiKey")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKey"))
 
 	val, err := id.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var scanned typeid.AnyUUID
+	var scanned typeid.AnyUUID[typeid.AnyPrefix]
 	if err := scanned.Scan(val); err != nil {
 		t.Fatal(err)
 	}
 
-	scanned.SetPrefix("apiKeySandbox")
+	scanned.SetPrefix(typeid.AnyPrefix("apiKeySandbox"))
 
 	if scanned.UUID() != id.UUID() {
 		t.Error("UUID mismatch in round-trip")
@@ -561,7 +561,7 @@ func TestUUID_Any(t *testing.T) {
 		t.Errorf("String mismatch: any=%q, typed=%q", any.String(), typed.String())
 	}
 
-	any.SetPrefix("admin")
+	any.SetPrefix(typeid.AnyPrefix("admin"))
 	if any.UUID() != typed.UUID() {
 		t.Error("UUID changed after SetPrefix")
 	}
@@ -572,7 +572,7 @@ func TestUUID_Any(t *testing.T) {
 
 func TestAnyUUID_GetTime(t *testing.T) {
 	before := time.Now()
-	id, _ := typeid.NewAnyUUID("user")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("user"))
 	after := time.Now()
 
 	got := id.GetTime()
@@ -586,11 +586,11 @@ func TestAnyUUID_GetTime(t *testing.T) {
 
 func TestAnyUUID_JSON(t *testing.T) {
 	type Record struct {
-		ID   typeid.AnyUUID `json:"id"`
-		Name string         `json:"name"`
+		ID   typeid.AnyUUID[typeid.AnyPrefix] `json:"id"`
+		Name string                           `json:"name"`
 	}
 
-	id, _ := typeid.NewAnyUUID("apiKey")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKey"))
 	original := Record{ID: id, Name: "test"}
 	data, err := json.Marshal(original)
 	if err != nil {
@@ -613,7 +613,7 @@ func TestAnyUUID_JSON(t *testing.T) {
 }
 
 func BenchmarkAnyUUID_String(b *testing.B) {
-	id, _ := typeid.NewAnyUUID("apiKeySandbox")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKeySandbox"))
 	b.ResetTimer()
 	for b.Loop() {
 		_ = id.String()
@@ -621,11 +621,11 @@ func BenchmarkAnyUUID_String(b *testing.B) {
 }
 
 func BenchmarkAnyUUID_Parse(b *testing.B) {
-	id, _ := typeid.NewAnyUUID("apiKeySandbox")
+	id, _ := typeid.NewAnyUUID(typeid.AnyPrefix("apiKeySandbox"))
 	s := id.String()
 	b.ResetTimer()
 	for b.Loop() {
-		typeid.ParseAnyUUID(s) //nolint:errcheck
+		typeid.ParseAnyUUID[typeid.AnyPrefix](s) //nolint:errcheck
 	}
 }
 
