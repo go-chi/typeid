@@ -45,11 +45,11 @@ func ParseAnyInt64[P Prefixer](s string) (AnyInt64[P], error) {
 	if len(suffix) != int64SuffixLen {
 		return AnyInt64[P]{}, fmt.Errorf("typeid: invalid format: %q", s)
 	}
-	if vp, ok := any(&p).(VariablePrefixer); ok {
-		if !vp.ParsePrefix(pref) {
-			return AnyInt64[P]{}, fmt.Errorf("typeid: unknown prefix: %q", pref)
-		}
-	} else if p.Prefix() != pref {
+	vp, isVar := any(&p).(VariablePrefixer)
+	if isVar && !vp.ParsePrefix(pref) {
+		return AnyInt64[P]{}, fmt.Errorf("typeid: unknown prefix: %q", pref)
+	}
+	if !isVar && p.Prefix() != pref {
 		return AnyInt64[P]{}, fmt.Errorf("typeid: prefix mismatch: expected %q, got %q", p.Prefix(), pref)
 	}
 	v, err := decodeBase32Int64(suffix)
