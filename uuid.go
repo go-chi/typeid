@@ -78,9 +78,9 @@ func (id UUID[P]) Value() (driver.Value, error) {
 }
 
 // Any converts a typed UUID to an AnyUUID with the same prefix and value.
-func (id UUID[P]) Any() AnyUUID[AnyPrefix] {
+func (id UUID[P]) Any() AnyUUID {
 	var p P
-	return AnyUUID[AnyPrefix]{val: id.val, prefix: AnyPrefix(p.Prefix())}
+	return AnyUUID{val: id.val, prefix: p.Prefix()}
 }
 
 func (id *UUID[P]) Scan(src any) (err error) {
