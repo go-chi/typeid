@@ -7,41 +7,35 @@ import (
 	"github.com/go-chi/typeid"
 )
 
-type Mode int8
+type Mode string
 
 const (
-	ModeLive    Mode = 0
-	ModeSandbox Mode = 1
+	ModeLive    Mode = "key"
+	ModeSandbox Mode = "key_sandbox"
 )
 
-func (m Mode) Prefix() string {
-	switch m {
-	case ModeSandbox:
-		return "key_sandbox"
-	default:
-		return "key"
-	}
-}
-
-type ApiKeyID = typeid.AnyUUID
-
-func ParseApiKeyID(s string, mode Mode) (ApiKeyID, error) {
-	var id typeid.AnyUUID
-	if err := id.UnmarshalText([]byte(s)); err != nil {
-		return ApiKeyID{}, err
-	}
-	if id.Prefix() != mode.Prefix() {
-		return ApiKeyID{}, fmt.Errorf("invalid api key prefix: %s, expected: %v", id.Prefix(), mode.Prefix())
-	}
-	return id, nil
+type ApiKeyID struct {
+	typeid.AnyUUID
 }
 
 func NewApiKeyID(mode Mode) ApiKeyID {
-	id, err := typeid.NewAnyUUID(mode.Prefix())
+	u, err := typeid.NewAnyUUID(string(mode))
 	if err != nil {
 		panic(err) // can't happen unless crypto/rand is not available
 	}
-	return id
+	return ApiKeyID{AnyUUID: u}
+}
+
+func (id *ApiKeyID) UnmarshalText(data []byte) error {
+	if err := id.AnyUUID.UnmarshalText(data); err != nil {
+		return err
+	}
+	switch id.AnyUUID.Prefix() {
+	case string(ModeLive), string(ModeSandbox):
+		return nil
+	default:
+		return fmt.Errorf("invalid api key prefix: %q", id.AnyUUID.Prefix())
+	}
 }
 
 type Request struct {
@@ -60,11 +54,10 @@ func ExampleAnyUUID_json() {
 	var liveRequest Request
 	_ = json.Unmarshal(data, &liveRequest)
 
-	// Invalid prefix
+	// Invalid prefix, expect error
 	data = []byte(`{"id":"key_invalid_prefix_01jcp1ss00edg828t5cy4tqkff", "description":"Invalid API Key"}`)
 	var unknownRequest Request
-	_ = json.Unmarshal(data, &unknownRequest)
-	_, err := ParseApiKeyID(unknownRequest.ID.String(), ModeLive)
+	err := json.Unmarshal(data, &unknownRequest)
 
 	fmt.Println(sandboxRequest.ID.Prefix())
 	fmt.Println(liveRequest.ID.Prefix())
@@ -73,5 +66,5 @@ func ExampleAnyUUID_json() {
 	// Output:
 	// key_sandbox
 	// key
-	// key_invalid_prefix invalid api key prefix: key_invalid_prefix, expected: key
+	// key_invalid_prefix invalid api key prefix: "key_invalid_prefix"
 }
