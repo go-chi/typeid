@@ -1,3 +1,13 @@
+# archived - moved under 0xPolygon org
+
+This repository has been transfered to https://github.com/0xPolygon/typeid. Sorry for the inconvenience.
+
+Change your import path to:
+
+```go
+import "github.com/0xPolygon/typeid"
+```
+
 # typeid
 
 Prefixed, base32-encoded, k-sortable identifiers for Go. Inspired by [Stripe API IDs](https://stripe.com/docs/api) and the [TypeID spec](https://github.com/jetify-com/typeid).
